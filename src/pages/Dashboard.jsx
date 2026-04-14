@@ -26,37 +26,66 @@ import {
 
 function Dashboard({ setActivePage, theme, toggleTheme }) {
   const {
-    totalPipeline,
-    newBids,
-    proposalBids,
-    inReviewBids,
-    wonBids,
-    executingBids,
-    deliveredBids,
-    closedBids,
-    activeClients,
-    recentBids,
-    totalClients,
-  } = useSelector(selectDashboardSummary);
+    totalPipeline = 0,
+    newBids = [],
+    proposalBids = [],
+    inReviewBids = [],
+    wonBids = [],
+    executingBids = [],
+    deliveredBids = [],
+    closedBids = [],
+    activeClients = [],
+    recentBids = [],
+    totalClients = 0,
+  } = useSelector(selectDashboardSummary) || {};
 
-  const pipelineHealth = useSelector(selectPipelineHealth);
-  const smartAlerts = useSelector(selectSmartAlerts);
-  const weightedForecast = useSelector(selectWeightedForecast);
-  const stageConversion = useSelector(selectStageConversion);
-  const pipelineBottleneck = useSelector(selectPipelineBottleneck);
-  const scenarioForecast = useSelector(selectScenarioForecast);
-  const deadlineRisk = useSelector(selectDeadlineRisk);
+  const pipelineHealth = useSelector(selectPipelineHealth) || {};
+  const smartAlerts = useSelector(selectSmartAlerts) || [];
+  const weightedForecast = useSelector(selectWeightedForecast) || {};
+  const stageConversion = useSelector(selectStageConversion) || {};
+  const pipelineBottleneck = useSelector(selectPipelineBottleneck) || {};
+  const scenarioForecast = useSelector(selectScenarioForecast) || {};
+  const deadlineRisk = useSelector(selectDeadlineRisk) || {};
 
-  // Updated to use phase instead of status
   const getPhaseBadgeClass = (phase) => {
-    const config = PHASE_CONFIG[phase] || {};
-    return `badge-${config.color || "secondary"}`;
+    const color = PHASE_CONFIG?.[phase]?.color;
+
+    switch (color) {
+      case "success":
+        return "badge-success";
+      case "warning":
+        return "badge-warning";
+      case "danger":
+        return "badge-danger";
+      case "primary":
+        return "badge-primary";
+      case "info":
+        return "badge-info";
+      case "secondary":
+      default:
+        return "badge-secondary";
+    }
   };
 
   const getPhaseLabel = (phase) => {
-    const config = PHASE_CONFIG[phase] || {};
-    return config.label || phase || "unknown";
+    return PHASE_CONFIG?.[phase]?.label || phase || "Unknown";
   };
+
+  const getSeverityBadgeClass = (severity) => {
+    switch (severity) {
+      case "high":
+        return "badge-danger";
+      case "medium":
+        return "badge-warning";
+      case "low":
+        return "badge-info";
+      default:
+        return "badge-success";
+    }
+  };
+
+  const stageDistribution = pipelineBottleneck?.stageDistribution || [];
+  const topStage = pipelineBottleneck?.topStage || null;
 
   return (
     <div className="app-layout">
@@ -71,12 +100,11 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
 
-        {/* Updated Stat Cards - now showing phase-based KPIs */}
         <div className="row mb-4">
           <div className="col-md-3 mb-3">
             <StatCard
               title="Total Pipeline"
-              value={`₹${totalPipeline.toLocaleString()}`}
+              value={`₹${Number(totalPipeline || 0).toLocaleString()}`}
               subtitle="Combined bid value"
               color="primary"
             />
@@ -105,7 +133,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
               title="In Review"
               value={inReviewBids.length}
               subtitle="Awaiting decision"
-              color="primary"
+              color="warning"
             />
           </div>
         </div>
@@ -140,6 +168,120 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           </div>
           <div className="col-lg-5 mb-4">
             <DeadlineRiskCard data={deadlineRisk} />
+          </div>
+        </div>
+
+        {/* Pipeline Bottleneck Visualization */}
+        <div className="row mb-4">
+          <div className="col-lg-12">
+            <div className="card soft-card border-0 shadow-sm">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                  <div>
+                    <h5 className="mb-1 font-weight-bold">
+                      Pipeline Bottleneck Visualization
+                    </h5>
+                    <p className="text-muted mb-0 small">
+                      Compare stage concentration across the pipeline.
+                    </p>
+                  </div>
+
+                  <div className="d-flex align-items-center gap-2">
+                    <span
+                      className={`badge px-3 py-2 ${getSeverityBadgeClass(
+                        pipelineBottleneck?.severity
+                      )}`}
+                    >
+                      {pipelineBottleneck?.severity || "healthy"}
+                    </span>
+                  </div>
+                </div>
+
+                {topStage ? (
+                  <div className="mb-4">
+                    <div className="p-3 rounded bg-light border">
+                      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                          <div className="small text-muted">Top Bottleneck</div>
+                          <div className="font-weight-bold">
+                            {topStage?.label || getPhaseLabel(topStage?.stage)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="small text-muted">Share of pipeline</div>
+                          <div className="font-weight-bold">
+                            {topStage?.percentage || 0}%
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-muted small">
+                        {pipelineBottleneck?.insight || "Pipeline looks balanced."}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {stageDistribution.length > 0 ? (
+                  <div>
+                    {stageDistribution.map((stage) => {
+                      const phaseColorClass = getPhaseBadgeClass(stage?.stage);
+                      const barClass =
+                        phaseColorClass === "badge-success"
+                          ? "bg-success"
+                          : phaseColorClass === "badge-warning"
+                          ? "bg-warning"
+                          : phaseColorClass === "badge-danger"
+                          ? "bg-danger"
+                          : phaseColorClass === "badge-primary"
+                          ? "bg-primary"
+                          : phaseColorClass === "badge-info"
+                          ? "bg-info"
+                          : "bg-secondary";
+
+                      return (
+                        <div key={stage.stage} className="mb-3">
+                          <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                              <span className={`badge ${phaseColorClass}`}>
+                                {stage?.label || getPhaseLabel(stage?.stage)}
+                              </span>
+                              <span className="text-muted small">
+                                {stage?.count || 0} items
+                              </span>
+                            </div>
+
+                            <div className="text-muted small">
+                              ₹{Number(stage?.amount || 0).toLocaleString()} •{" "}
+                              {stage?.percentage || 0}%
+                            </div>
+                          </div>
+
+                          <div
+                            className="progress"
+                            style={{ height: "10px", borderRadius: "999px" }}
+                          >
+                            <div
+                              className={`progress-bar ${barClass}`}
+                              role="progressbar"
+                              style={{
+                                width: `${stage?.percentage || 0}%`,
+                              }}
+                              aria-valuenow={stage?.percentage || 0}
+                              aria-valuemin="0"
+                              aria-valuemax="100"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted py-4">
+                    No stage distribution available.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -229,12 +371,28 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
 
                 <ul className="list-group list-group-flush snapshot-list">
                   <li className="list-group-item d-flex justify-content-between">
+                    <span>New</span>
+                    <strong>{newBids.length}</strong>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Proposal</span>
+                    <strong>{proposalBids.length}</strong>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between">
                     <span>In Review</span>
                     <strong>{inReviewBids.length}</strong>
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Won</span>
                     <strong>{wonBids.length}</strong>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Executing</span>
+                    <strong>{executingBids.length}</strong>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Delivered</span>
+                    <strong>{deliveredBids.length}</strong>
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Closed</span>
