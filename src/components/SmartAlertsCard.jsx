@@ -3,38 +3,33 @@ import React from "react";
 function SmartAlertsCard({ alerts = [] }) {
   const getAlertClass = (type) => {
     switch (type) {
-      case "danger":
-        return "alert-danger";
-      case "warning":
-        return "alert-warning";
       case "success":
-        return "alert-success";
-      case "info":
-        return "alert-info";
+        return "alert alert-success";
+      case "warning":
+        return "alert alert-warning";
+      case "danger":
+        return "alert alert-danger";
       default:
-        return "alert-secondary";
+        return "alert alert-info";
     }
   };
 
   return (
-    <div className="card soft-card border-0 shadow-sm h-100">
+    <div className="card border-0 shadow-sm h-100 soft-card">
       <div className="card-body">
-        <div className="mb-3">
-          <h5 className="mb-1 font-weight-bold">Smart Alerts</h5>
-          <p className="text-muted small mb-0">
-            Action-focused warnings and pipeline highlights
-          </p>
-        </div>
+        <h5 className="font-weight-bold mb-1">Smart Alerts</h5>
+        <p className="text-muted small mb-4">
+          Important pipeline signals and suggestions
+        </p>
 
         {alerts.length > 0 ? (
-          alerts.map((alert) => (
+          alerts.map((alert, index) => (
             <div
-              key={alert.id}
-              className={`alert ${getAlertClass(alert.type)} mb-3`}
+              key={`${alert.type}-${alert.message}-${index}`}
+              className={`${getAlertClass(alert.type)} mb-3`}
               role="alert"
             >
-              <h6 className="mb-1">{alert.title}</h6>
-              <p className="mb-0 small">{alert.message}</p>
+              {alert.message}
             </div>
           ))
         ) : (

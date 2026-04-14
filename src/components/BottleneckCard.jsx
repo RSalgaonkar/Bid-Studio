@@ -3,19 +3,6 @@ import React from "react";
 function BottleneckCard({ data }) {
   const { topStage, severity, insight, stageDistribution = [] } = data || {};
 
-  const getAlertClass = () => {
-    switch (severity) {
-      case "high":
-        return "alert alert-danger";
-      case "medium":
-        return "alert alert-warning";
-      case "low":
-        return "alert alert-info";
-      default:
-        return "alert alert-success";
-    }
-  };
-
   const getBadgeClass = () => {
     switch (severity) {
       case "high":
@@ -30,51 +17,40 @@ function BottleneckCard({ data }) {
   };
 
   return (
-    <div className="card soft-card border-0 shadow-sm h-100">
+    <div className="card border-0 shadow-sm h-100 soft-card">
       <div className="card-body">
         <div className="d-flex justify-content-between align-items-start mb-3">
           <div>
-            <h5 className="mb-1 font-weight-bold">Pipeline Bottleneck</h5>
-            <p className="text-muted small mb-0">
-              Detect concentration risk by stage
-            </p>
+            <h5 className="font-weight-bold mb-1">Pipeline Bottleneck</h5>
+            <p className="text-muted small mb-0">Concentration by status</p>
           </div>
-
           <span className={getBadgeClass()} style={{ textTransform: "capitalize" }}>
-            {severity}
+            {severity || "healthy"}
           </span>
         </div>
 
-        <div className={getAlertClass()} role="alert">
-          {insight}
-        </div>
+        <p className="text-muted small mb-4">{insight}</p>
 
-        {topStage && (
-          <div className="mb-3">
-            <p className="mb-1 text-muted small">Most crowded stage</p>
-            <h6 className="mb-0">
-              {topStage.stage} ({topStage.percentage}%)
-            </h6>
-          </div>
-        )}
-
-        <hr />
-
-        <h6 className="font-weight-bold mb-3">Stage Distribution</h6>
-
-        <ul className="list-group list-group-flush snapshot-list">
-          {stageDistribution.map((item) => (
-            <li
-              key={item.stage}
-              className="list-group-item d-flex justify-content-between px-0"
-            >
-              <span style={{ textTransform: "capitalize" }}>
-                {item.stage} ({item.count})
+        <div className="stage-breakdown">
+          {stageDistribution.map((stage) => (
+            <div key={stage.stage} className="d-flex justify-content-between align-items-center mb-2">
+              <span className="text-muted small">
+                {stage.stage.charAt(0).toUpperCase() + stage.stage.slice(1)}
               </span>
-              <strong>{item.percentage}%</strong>
-            </li>
+              <div className="d-flex align-items-center">
+                <strong className="me-2">{stage.percentage}%</strong>
+                <div 
+                  className="stage-bar" 
+                  style={{ 
+                    width: `${Math.min(stage.percentage, 100)}%`,
+                    backgroundColor: stage.stage === 'pending' ? '#ffc107' : 
+                                   stage.stage === 'approved' ? '#28a745' : '#dc3545'
+                  }}
+                />
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );

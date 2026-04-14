@@ -1,201 +1,113 @@
 import { createSelector } from "@reduxjs/toolkit";
 
 const selectBids = (state) => state.bids?.list || [];
-const selectClients = (state) => state.clients?.list || [];
 
-const getDaysDifference = (dateString) => {
-  if (!dateString) return null;
+export const selectBidStats = createSelector([selectBids], (bids) => {
+  const totalBids = bids.length;
 
-  const today = new Date();
-  const target = new Date(dateString);
+  const totalValue = bids.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
-  if (Number.isNaN(target.getTime())) return null;
+  const pendingCount = bids.filter((bid) => bid.status === "pending").length;
+  const approvedCount = bids.filter((bid) => bid.status === "approved").length;
+  const rejectedCount = bids.filter((bid) => bid.status === "rejected").length;
 
-  const todayOnly = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
+  const approvedValue = bids
+    .filter((bid) => bid.status === "approved")
+    .reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
-  const targetOnly = new Date(
-    target.getFullYear(),
-    target.getMonth(),
-    target.getDate()
-  );
+  const pendingValue = bids
+    .filter((bid) => bid.status === "pending")
+    .reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
-  const diffTime = targetOnly - todayOnly;
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
-};
+  const rejectedValue = bids
+    .filter((bid) => bid.status === "rejected")
+    .reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
-export const selectPipelineHealth = createSelector(
-  [selectBids, selectClients],
-  (bids, clients) => {
-    const totalBids = bids.length;
-    const totalClients = clients.length;
+  return {
+    totalBids,
+    totalValue,
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    approvedValue,
+    pendingValue,
+    rejectedValue,
+  };
+});
 
-    let wonCount = 0;
-    let lostCount = 0;
-    let sentCount = 0;
-    let leadCount = 0;
+export const selectPipelineHealth = createSelector([selectBids], (bids) => {
+  const total = bids.length;
 
-    let totalPipelineValue = 0;
-    let wonValue = 0;
-    let overdueCount = 0;
-    let dueSoonCount = 0;
+  const pending = bids.filter((bid) => bid.status === "pending").length;
+  const approved = bids.filter((bid) => bid.status === "approved").length;
+  const rejected = bids.filter((bid) => bid.status === "rejected").length;
 
-    bids.forEach((bid) => {
-      const status = bid?.status || "";
-      const amount = Number(bid?.amount || 0);
-      const dueDate = bid?.dueDate;
+  const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
+  const rejectionRate = total > 0 ? Math.round((rejected / total) * 100) : 0;
+  const pendingRate = total > 0 ? Math.round((pending / total) * 100) : 0;
 
-      totalPipelineValue += amount;
+  let healthScore = 100 - rejectionRate;
 
-      if (status === "won") {
-        wonCount += 1;
-        wonValue += amount;
-      } else if (status === "lost") {
-        lostCount += 1;
-      } else if (status === "sent") {
-        sentCount += 1;
-      } else if (status === "lead") {
-        leadCount += 1;
-      }
-
-      const diffDays = getDaysDifference(dueDate);
-
-      if (diffDays !== null) {
-        if (diffDays < 0 && status !== "won" && status !== "lost") {
-          overdueCount += 1;
-        } else if (
-          diffDays >= 0 &&
-          diffDays <= 7 &&
-          status !== "won" &&
-          status !== "lost"
-        ) {
-          dueSoonCount += 1;
-        }
-      }
-    });
-
-    const winRate = totalBids > 0 ? Math.round((wonCount / totalBids) * 100) : 0;
-    const lossRate = totalBids > 0 ? Math.round((lostCount / totalBids) * 100) : 0;
-
-    let score = 50;
-
-    score += wonCount * 6;
-    score += sentCount * 2;
-    score += totalClients > 0 ? 5 : 0;
-    score -= lostCount * 4;
-    score -= overdueCount * 6;
-    score -= dueSoonCount * 2;
-    score -= leadCount > sentCount ? 5 : 0;
-
-    if (totalPipelineValue >= 200000) score += 10;
-    if (wonValue >= 100000) score += 10;
-
-    score = Math.max(0, Math.min(100, score));
-
-    let healthLabel = "Critical";
-    if (score >= 80) healthLabel = "Excellent";
-    else if (score >= 65) healthLabel = "Good";
-    else if (score >= 45) healthLabel = "Average";
-    else if (score >= 25) healthLabel = "Weak";
-
-    return {
-      score,
-      healthLabel,
-      totalBids,
-      totalClients,
-      totalPipelineValue,
-      wonValue,
-      winRate,
-      lossRate,
-      overdueCount,
-      dueSoonCount,
-      leadCount,
-      sentCount,
-      wonCount,
-      lostCount,
-    };
+  if (pendingRate > 50) {
+    healthScore -= 10;
   }
-);
+
+  if (approvalRate < 30) {
+    healthScore -= 10;
+  }
+
+  if (healthScore < 0) {
+    healthScore = 0;
+  }
+
+  return {
+    total,
+    pending,
+    approved,
+    rejected,
+    approvalRate,
+    rejectionRate,
+    pendingRate,
+    healthScore,
+  };
+});
 
 export const selectSmartAlerts = createSelector([selectBids], (bids) => {
   const alerts = [];
 
-  const openBids = bids.filter(
-    (bid) => bid?.status !== "won" && bid?.status !== "lost"
-  );
+  const pendingBids = bids.filter((bid) => bid.status === "pending");
+  const rejectedBids = bids.filter((bid) => bid.status === "rejected");
+  const approvedBids = bids.filter((bid) => bid.status === "approved");
 
-  const overdueBids = openBids.filter((bid) => {
-    const diffDays = getDaysDifference(bid?.dueDate);
-    return diffDays !== null && diffDays < 0;
-  });
-
-  const dueSoonBids = openBids.filter((bid) => {
-    const diffDays = getDaysDifference(bid?.dueDate);
-    return diffDays !== null && diffDays >= 0 && diffDays <= 7;
-  });
-
-  const highValueOpenBids = openBids.filter(
-    (bid) => Number(bid?.amount || 0) >= 50000
-  );
-
-  const leadBids = bids.filter((bid) => bid?.status === "lead");
-  const sentBids = bids.filter((bid) => bid?.status === "sent");
-  const lostBids = bids.filter((bid) => bid?.status === "lost");
-
-  if (overdueBids.length > 0) {
+  if (pendingBids.length >= 3) {
     alerts.push({
-      id: "overdue-bids",
+      id: `pending-${pendingBids.length}`,
+      type: "warning",
+      message: `${pendingBids.length} bids are still pending. Review follow-ups.`,
+    });
+  }
+
+  if (rejectedBids.length >= 2) {
+    alerts.push({
+      id: `rejected-${rejectedBids.length}`,
       type: "danger",
-      title: "Overdue bids need attention",
-      message: `${overdueBids.length} open bid(s) are past due date.`,
+      message: `${rejectedBids.length} bids were rejected. Review proposal quality or pricing.`,
     });
   }
 
-  if (dueSoonBids.length > 0) {
+  if (approvedBids.length >= 3) {
     alerts.push({
-      id: "due-soon-bids",
-      type: "warning",
-      title: "Upcoming bid deadlines",
-      message: `${dueSoonBids.length} open bid(s) are due within 7 days.`,
-    });
-  }
-
-  if (highValueOpenBids.length > 0) {
-    alerts.push({
-      id: "high-value-open",
-      type: "info",
-      title: "High-value opportunities open",
-      message: `${highValueOpenBids.length} open bid(s) are worth ₹50,000 or more.`,
-    });
-  }
-
-  if (leadBids.length > sentBids.length) {
-    alerts.push({
-      id: "lead-conversion",
-      type: "warning",
-      title: "Too many bids are still in lead stage",
-      message: "Consider pushing more leads into sent stage to improve pipeline movement.",
-    });
-  }
-
-  if (lostBids.length >= 3) {
-    alerts.push({
-      id: "loss-pattern",
-      type: "secondary",
-      title: "Loss trend detected",
-      message: `${lostBids.length} bids are currently marked as lost.`,
+      id: `approved-${approvedBids.length}`,
+      type: "success",
+      message: `${approvedBids.length} bids are approved. Strong conversion momentum.`,
     });
   }
 
   if (alerts.length === 0) {
     alerts.push({
-      id: "healthy-pipeline",
-      type: "success",
-      title: "Pipeline looks healthy",
-      message: "No major delivery or follow-up risks detected right now.",
+      id: "no-alerts",
+      type: "info",
+      message: "No major pipeline alerts right now.",
     });
   }
 
@@ -204,10 +116,9 @@ export const selectSmartAlerts = createSelector([selectBids], (bids) => {
 
 export const selectWeightedForecast = createSelector([selectBids], (bids) => {
   const probabilityMap = {
-    lead: 0.2,
-    sent: 0.5,
-    won: 1,
-    lost: 0,
+    pending: 0.5,
+    approved: 1,
+    rejected: 0,
   };
 
   let totalOpenPipeline = 0;
@@ -215,38 +126,40 @@ export const selectWeightedForecast = createSelector([selectBids], (bids) => {
   let committedRevenue = 0;
 
   const breakdown = {
-    lead: 0,
-    sent: 0,
-    won: 0,
-    lost: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
   };
 
   bids.forEach((bid) => {
-    const status = bid?.status || "lead";
+    const status = bid?.status || "pending";
     const amount = Number(bid?.amount || 0);
     const probability = probabilityMap[status] ?? 0;
 
     breakdown[status] = (breakdown[status] || 0) + amount;
 
-    if (status !== "lost") {
+    if (status === "pending") {
       totalOpenPipeline += amount;
     }
 
     weightedForecast += amount * probability;
 
-    if (status === "won") {
+    if (status === "approved") {
       committedRevenue += amount;
     }
   });
 
-  const forecastGap = totalOpenPipeline - weightedForecast;
+  // FIXED: Use inline function instead of external reference
+  const pendingWeighted = bids
+    .filter((bid) => bid.status === "pending")
+    .reduce((sum, bid) => sum + Number(bid.amount || 0) * 0.5, 0);
 
   return {
     probabilityMap,
     totalOpenPipeline,
     weightedForecast: Math.round(weightedForecast),
     committedRevenue,
-    forecastGap: Math.round(forecastGap),
+    forecastGap: Math.round(totalOpenPipeline - pendingWeighted),
     breakdown,
   };
 });
@@ -254,73 +167,72 @@ export const selectWeightedForecast = createSelector([selectBids], (bids) => {
 export const selectStageConversion = createSelector([selectBids], (bids) => {
   const total = bids.length;
 
-  const leadCount = bids.filter((bid) => bid.status === "lead").length;
-  const sentCount = bids.filter((bid) => bid.status === "sent").length;
-  const wonCount = bids.filter((bid) => bid.status === "won").length;
-  const lostCount = bids.filter((bid) => bid.status === "lost").length;
+  const pendingCount = bids.filter((bid) => bid.status === "pending").length;
+  const approvedCount = bids.filter((bid) => bid.status === "approved").length;
+  const rejectedCount = bids.filter((bid) => bid.status === "rejected").length;
 
-  const leadToSent =
-    leadCount > 0 ? Math.round((sentCount / leadCount) * 100) : 0;
-
-  const sentToWon =
-    sentCount > 0 ? Math.round((wonCount / sentCount) * 100) : 0;
-
-  const overallWinRate =
-    total > 0 ? Math.round((wonCount / total) * 100) : 0;
-
-  const lossRate =
-    total > 0 ? Math.round((lostCount / total) * 100) : 0;
+  const approvalRate = total > 0 ? Math.round((approvedCount / total) * 100) : 0;
+  const rejectionRate = total > 0 ? Math.round((rejectedCount / total) * 100) : 0;
+  const pendingRate = total > 0 ? Math.round((pendingCount / total) * 100) : 0;
 
   return {
     total,
-    leadCount,
-    sentCount,
-    wonCount,
-    lostCount,
-    leadToSent,
-    sentToWon,
-    overallWinRate,
-    lossRate,
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    approvalRate,
+    rejectionRate,
+    pendingRate,
   };
 });
 
 export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
   const stageCounts = {
-    lead: 0,
-    sent: 0,
-    won: 0,
-    lost: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
   };
 
   const stageAmounts = {
-    lead: 0,
-    sent: 0,
-    won: 0,
-    lost: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
   };
 
   bids.forEach((bid) => {
-    const status = bid?.status || "lead";
+    const status = bid?.status || "pending";
     const amount = Number(bid?.amount || 0);
 
-    stageCounts[status] = (stageCounts[status] || 0) + 1;
-    stageAmounts[status] = (stageAmounts[status] || 0) + amount;
+    // FIXED: Only process valid statuses to prevent NaN
+    if (["pending", "approved", "rejected"].includes(status)) {
+      stageCounts[status] += 1;
+      stageAmounts[status] += amount;
+    }
   });
 
   const total = bids.length;
 
-  const stageDistribution = Object.keys(stageCounts).map((stage) => {
-    const count = stageCounts[stage];
-    const amount = stageAmounts[stage];
-    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-
-    return {
-      stage,
-      count,
-      amount,
-      percentage,
-    };
-  });
+  // FIXED: Explicitly define only your 3 statuses - NO NaN%
+  const stageDistribution = [
+    {
+      stage: "pending",
+      count: stageCounts.pending,
+      amount: stageAmounts.pending,
+      percentage: total > 0 ? Math.round((stageCounts.pending / total) * 100) : 0,
+    },
+    {
+      stage: "approved",
+      count: stageCounts.approved,
+      amount: stageAmounts.approved,
+      percentage: total > 0 ? Math.round((stageCounts.approved / total) * 100) : 0,
+    },
+    {
+      stage: "rejected",
+      count: stageCounts.rejected,
+      amount: stageAmounts.rejected,
+      percentage: total > 0 ? Math.round((stageCounts.rejected / total) * 100) : 0,
+    },
+  ];
 
   const sortedStages = [...stageDistribution].sort(
     (a, b) => b.percentage - a.percentage
@@ -329,18 +241,18 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
   const topStage = sortedStages[0] || null;
 
   let severity = "healthy";
-  let insight = "Pipeline flow looks balanced.";
+  let insight = "Pipeline looks balanced.";
 
   if (topStage) {
     if (topStage.percentage >= 50) {
       severity = "high";
-      insight = `Critical bottleneck: ${topStage.stage} stage holds ${topStage.percentage}% of all bids.`;
+      insight = `${topStage.stage} stage holds ${topStage.percentage}% of bids. This is a major concentration risk.`;
     } else if (topStage.percentage >= 35) {
       severity = "medium";
-      insight = `Possible bottleneck: ${topStage.stage} stage holds ${topStage.percentage}% of all bids.`;
+      insight = `${topStage.stage} stage holds ${topStage.percentage}% of bids. Watch this stage closely.`;
     } else if (topStage.percentage >= 25) {
       severity = "low";
-      insight = `Watch ${topStage.stage} stage closely. It holds ${topStage.percentage}% of the pipeline.`;
+      insight = `${topStage.stage} stage is the biggest share at ${topStage.percentage}%.`;
     }
   }
 
@@ -350,5 +262,74 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
     severity,
     insight,
     stageDistribution,
+  };
+});
+
+export const selectScenarioForecast = createSelector([selectBids], (bids) => {
+  const scenarios = {
+    best: { pending: 0.7, approved: 1, rejected: 0 },
+    base: { pending: 0.5, approved: 1, rejected: 0 },
+    worst: { pending: 0.3, approved: 1, rejected: 0 },
+  };
+
+  const calculateScenario = (probabilityMap) => {
+    return Math.round(
+      bids.reduce((total, bid) => {
+        const status = bid?.status || "pending";
+        const amount = Number(bid?.amount || 0);
+        const probability = probabilityMap[status] ?? 0;
+        return total + amount * probability;
+      }, 0)
+    );
+  };
+
+  return {
+    bestCase: calculateScenario(scenarios.best),
+    baseCase: calculateScenario(scenarios.base),
+    worstCase: calculateScenario(scenarios.worst),
+    scenarios,
+  };
+});
+
+export const selectDeadlineRisk = createSelector([selectBids], (bids) => {
+  const today = new Date();
+
+  const enriched = bids.map((bid) => {
+    const deadlineDate = bid?.deadline ? new Date(bid.deadline) : today;
+    const diffTime = deadlineDate.getTime() - today.getTime();
+    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let urgency = "safe";
+
+    if (bid.status === "pending") {
+      if (daysLeft < 0) {
+        urgency = "overdue";
+      } else if (daysLeft <= 3) {
+        urgency = "critical";
+      } else if (daysLeft <= 7) {
+        urgency = "warning";
+      }
+    }
+
+    return {
+      ...bid,
+      daysLeft,
+      urgency,
+    };
+  });
+
+  const riskyBids = enriched
+    .filter(
+      (bid) =>
+        bid.status === "pending" &&
+        (bid.urgency === "overdue" ||
+          bid.urgency === "critical" ||
+          bid.urgency === "warning")
+    )
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+
+  return {
+    riskyCount: riskyBids.length,
+    riskyBids,
   };
 });

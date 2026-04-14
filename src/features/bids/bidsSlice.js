@@ -74,14 +74,29 @@ const bidsSlice = createSlice({
   initialState,
   reducers: {
     addBid: (state, action) => {
-      state.list.unshift(action.payload);
+      state.list.push({
+        id: Date.now(),
+        title: action.payload.title || "",
+        client: action.payload.client || "",
+        amount: Number(action.payload.amount || 0),
+        status: action.payload.status || "pending",
+        deadline: action.payload.deadline || "",
+      });
     },
+
     updateBid: (state, action) => {
       const index = state.list.findIndex((bid) => bid.id === action.payload.id);
+
       if (index !== -1) {
-        state.list[index] = action.payload;
+        state.list[index] = {
+          ...state.list[index],
+          ...action.payload,
+          amount: Number(action.payload.amount || 0),
+          status: action.payload.status || state.list[index].status,
+        };
       }
     },
+
     deleteBid: (state, action) => {
       state.list = state.list.filter((bid) => bid.id !== action.payload);
     },
