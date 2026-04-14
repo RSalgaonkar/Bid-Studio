@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
@@ -47,6 +47,33 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
   const scenarioForecast = useSelector(selectScenarioForecast) || {};
   const deadlineRisk = useSelector(selectDeadlineRisk) || {};
 
+  const [stageTypeFilter, setStageTypeFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("percentage-desc");
+  const [minPercentage, setMinPercentage] = useState(0);
+  const [selectedPhaseFilter, setSelectedPhaseFilter] = useState(null);
+  const [selectedStage, setSelectedStage] = useState(null);
+
+  const phaseBidMap = useMemo(
+    () => ({
+      new: newBids,
+      proposal: proposalBids,
+      in_review: inReviewBids,
+      won: wonBids,
+      executing: executingBids,
+      delivered: deliveredBids,
+      closed: closedBids,
+    }),
+    [
+      newBids,
+      proposalBids,
+      inReviewBids,
+      wonBids,
+      executingBids,
+      deliveredBids,
+      closedBids,
+    ]
+  );
+
   const getPhaseBadgeClass = (phase) => {
     const color = PHASE_CONFIG?.[phase]?.color;
 
@@ -85,7 +112,137 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
   };
 
   const stageDistribution = pipelineBottleneck?.stageDistribution || [];
-  const topStage = pipelineBottleneck?.topStage || null;
+
+  const filteredStageDistribution = useMemo(() => {
+    let stages = [...stageDistribution];
+
+    if (stageTypeFilter === "early") {
+      stages = stages.filter((stage) =>
+        ["new", "proposal", "in_review"].includes(stage.stage)
+      );
+    }
+
+    if (stageTypeFilter === "late") {
+      stages = stages.filter((stage) =>
+        ["won", "executing", "delivered"].includes(stage.stage)
+      );
+    }
+
+    if (stageTypeFilter === "closed") {
+      stages = stages.filter((stage) => stage.stage === "closed");
+    }
+
+    stages = stages.filter(
+      (stage) => Number(stage?.percentage || 0) >= Number(minPercentage || 0)
+    );
+
+    switch (sortMode) {
+      case "percentage-asc":
+        stages.sort((a, b) => (a?.percentage || 0) - (b?.percentage || 0));
+        break;
+      case "amount-desc":
+        stages.sort((a, b) => (b?.amount || 0) - (a?.amount || 0));
+        break;
+      case "amount-asc":
+        stages.sort((a, b) => (a?.amount || 0) - (b?.amount || 0));
+        break;
+      case "count-desc":
+        stages.sort((a, b) => (b?.count || 0) - (a?.count || 0));
+        break;
+      case "count-asc":
+        stages.sort((a, b) => (a?.count || 0) - (b?.count || 0));
+        break;
+      case "label-asc":
+        stages.sort((a, b) => (a?.label || "").localeCompare(b?.label || ""));
+        break;
+      case "percentage-desc":
+      default:
+        stages.sort((a, b) => (b?.percentage || 0) - (a?.percentage || 0));
+        break;
+    }
+
+    return stages;
+  }, [stageDistribution, stageTypeFilter, sortMode, minPercentage]);
+
+  const filteredTopStage = filteredStageDistribution[0] || null;
+
+  const selectedPhaseBids = selectedPhaseFilter
+    ? phaseBidMap[selectedPhaseFilter] || []
+    : [];
+
+  const selectedPhaseAmount = selectedPhaseBids.reduce(
+    (sum, bid) => sum + Number(bid?.amount || 0),
+    0
+  );
+
+  const selectedPhaseProbability =
+    PHASE_CONFIG?.[selectedPhaseFilter]?.probability ?? 0;
+
+  const selectedPhaseScenarioForecast = useMemo(() => {
+    if (!selectedPhaseFilter) return null;
+
+    const bestProbabilityMap = {
+      new: 0.2,
+      proposal: 0.5,
+      in_review: 0.8,
+      won: 1,
+      executing: 1,
+      delivered: 1,
+      closed: 0,
+    };
+
+    const baseProbabilityMap = {
+      new: 0.1,
+      proposal: 0.3,
+      in_review: 0.6,
+      won: 1,
+      executing: 0.9,
+      delivered: 1,
+      closed: 0,
+    };
+
+    const worstProbabilityMap = {
+      new: 0.05,
+      proposal: 0.2,
+      in_review: 0.4,
+      won: 1,
+      executing: 0.8,
+      delivered: 1,
+      closed: 0,
+    };
+
+    const calculateScenario = (probabilityMap) => {
+      return Math.round(
+        selectedPhaseBids.reduce((total, bid) => {
+          const amount = Number(bid?.amount || 0);
+          const probability = probabilityMap[selectedPhaseFilter] ?? 0;
+          return total + amount * probability;
+        }, 0)
+      );
+    };
+
+    return {
+      bestCase: calculateScenario(bestProbabilityMap),
+      baseCase: calculateScenario(baseProbabilityMap),
+      worstCase: calculateScenario(worstProbabilityMap),
+      selectedPhase: selectedPhaseFilter,
+      selectedPhaseLabel: getPhaseLabel(selectedPhaseFilter),
+      selectedPhaseCount: selectedPhaseBids.length,
+      selectedPhaseAmount,
+      selectedPhaseProbability,
+    };
+  }, [selectedPhaseFilter, selectedPhaseBids, selectedPhaseAmount]);
+
+  const clearBottleneckFilters = () => {
+    setStageTypeFilter("all");
+    setSortMode("percentage-desc");
+    setMinPercentage(0);
+    setSelectedPhaseFilter(null);
+  };
+
+  const togglePhaseCrossFilter = (phase) => {
+    setSelectedPhaseFilter((prev) => (prev === phase ? null : phase));
+  };
 
   return (
     <div className="app-layout">
@@ -158,73 +315,245 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
             <ConversionInsightsCard data={stageConversion} />
           </div>
           <div className="col-lg-5 mb-4">
-            <BottleneckCard data={pipelineBottleneck} />
+            <BottleneckCard
+              data={pipelineBottleneck}
+              selectedStage={selectedStage}
+              onStageSelect={setSelectedStage}
+            />
           </div>
         </div>
 
         <div className="row mb-4">
           <div className="col-lg-7 mb-4">
-            <ScenarioForecastCard data={scenarioForecast} />
+            <div className="card soft-card border-0 shadow-sm h-100">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
+                  <div>
+                    <h5 className="mb-1 font-weight-bold">Scenario Forecast</h5>
+                    <p className="text-muted mb-0 small">
+                      {selectedPhaseFilter
+                        ? `Cross-filtered by ${getPhaseLabel(selectedPhaseFilter)} stage.`
+                        : "Overall forecast across all pipeline phases."}
+                    </p>
+                  </div>
+
+                  {selectedPhaseFilter ? (
+                    <span className={`badge px-3 py-2 ${getPhaseBadgeClass(selectedPhaseFilter)}`}>
+                      {getPhaseLabel(selectedPhaseFilter)}
+                    </span>
+                  ) : null}
+                </div>
+
+                {selectedPhaseScenarioForecast ? (
+                  <>
+                    <div className="row mb-3">
+                      <div className="col-md-4 mb-3">
+                        <div className="border rounded p-3 h-100">
+                          <div className="small text-muted">Best Case</div>
+                          <div className="h5 mb-0 font-weight-bold text-success">
+                            ₹{Number(selectedPhaseScenarioForecast.bestCase || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-md-4 mb-3">
+                        <div className="border rounded p-3 h-100">
+                          <div className="small text-muted">Base Case</div>
+                          <div className="h5 mb-0 font-weight-bold text-primary">
+                            ₹{Number(selectedPhaseScenarioForecast.baseCase || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-md-4 mb-3">
+                        <div className="border rounded p-3 h-100">
+                          <div className="small text-muted">Worst Case</div>
+                          <div className="h5 mb-0 font-weight-bold text-danger">
+                            ₹{Number(selectedPhaseScenarioForecast.worstCase || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border rounded p-3 bg-light">
+                      <div className="row">
+                        <div className="col-md-3 mb-2">
+                          <div className="small text-muted">Selected Phase</div>
+                          <div className="font-weight-bold">
+                            {selectedPhaseScenarioForecast.selectedPhaseLabel}
+                          </div>
+                        </div>
+
+                        <div className="col-md-3 mb-2">
+                          <div className="small text-muted">Items</div>
+                          <div className="font-weight-bold">
+                            {selectedPhaseScenarioForecast.selectedPhaseCount}
+                          </div>
+                        </div>
+
+                        <div className="col-md-3 mb-2">
+                          <div className="small text-muted">Phase Amount</div>
+                          <div className="font-weight-bold">
+                            ₹{Number(selectedPhaseScenarioForecast.selectedPhaseAmount || 0).toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="col-md-3 mb-2">
+                          <div className="small text-muted">Default Probability</div>
+                          <div className="font-weight-bold">
+                            {Math.round((selectedPhaseScenarioForecast.selectedPhaseProbability || 0) * 100)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <ScenarioForecastCard
+                    data={scenarioForecast}
+                    selectedStage={selectedStage}
+                    bottleneckData={pipelineBottleneck}
+                  />
+                )}
+              </div>
+            </div>
           </div>
+
           <div className="col-lg-5 mb-4">
             <DeadlineRiskCard data={deadlineRisk} />
           </div>
         </div>
 
-        {/* Pipeline Bottleneck Visualization */}
         <div className="row mb-4">
           <div className="col-lg-12">
             <div className="card soft-card border-0 shadow-sm">
               <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div className="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
                   <div>
                     <h5 className="mb-1 font-weight-bold">
                       Pipeline Bottleneck Visualization
                     </h5>
                     <p className="text-muted mb-0 small">
-                      Compare stage concentration across the pipeline.
+                      Click a stage bar to cross-filter the scenario forecast.
                     </p>
                   </div>
 
-                  <div className="d-flex align-items-center gap-2">
-                    <span
-                      className={`badge px-3 py-2 ${getSeverityBadgeClass(
-                        pipelineBottleneck?.severity
-                      )}`}
+                  <span
+                    className={`badge px-3 py-2 ${getSeverityBadgeClass(
+                      pipelineBottleneck?.severity
+                    )}`}
+                  >
+                    {pipelineBottleneck?.severity || "healthy"}
+                  </span>
+                </div>
+
+                <div className="row mb-4">
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label small font-weight-bold">
+                      Stage Group
+                    </label>
+                    <select
+                      className="form-control"
+                      value={stageTypeFilter}
+                      onChange={(e) => setStageTypeFilter(e.target.value)}
                     >
-                      {pipelineBottleneck?.severity || "healthy"}
-                    </span>
+                      <option value="all">All Stages</option>
+                      <option value="early">Early Stages</option>
+                      <option value="late">Late Stages</option>
+                      <option value="closed">Closed Only</option>
+                    </select>
+                  </div>
+
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label small font-weight-bold">
+                      Sort By
+                    </label>
+                    <select
+                      className="form-control"
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value)}
+                    >
+                      <option value="percentage-desc">Highest Percentage</option>
+                      <option value="percentage-asc">Lowest Percentage</option>
+                      <option value="amount-desc">Highest Amount</option>
+                      <option value="amount-asc">Lowest Amount</option>
+                      <option value="count-desc">Highest Count</option>
+                      <option value="count-asc">Lowest Count</option>
+                      <option value="label-asc">Stage Name A-Z</option>
+                    </select>
+                  </div>
+
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label small font-weight-bold">
+                      Minimum %: {minPercentage}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      className="form-range w-100"
+                      value={minPercentage}
+                      onChange={(e) => setMinPercentage(Number(e.target.value))}
+                    />
                   </div>
                 </div>
 
-                {topStage ? (
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                  <div className="small text-muted">
+                    Showing {filteredStageDistribution.length} stage
+                    {filteredStageDistribution.length !== 1 ? "s" : ""}
+                  </div>
+
+                  <div className="d-flex align-items-center gap-2 flex-wrap">
+                    {selectedPhaseFilter ? (
+                      <span className={`badge px-3 py-2 ${getPhaseBadgeClass(selectedPhaseFilter)}`}>
+                        Active Cross-Filter: {getPhaseLabel(selectedPhaseFilter)}
+                      </span>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={clearBottleneckFilters}
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                </div>
+
+                {filteredTopStage ? (
                   <div className="mb-4">
                     <div className="p-3 rounded bg-light border">
                       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div>
-                          <div className="small text-muted">Top Bottleneck</div>
+                          <div className="small text-muted">Top Visible Bottleneck</div>
                           <div className="font-weight-bold">
-                            {topStage?.label || getPhaseLabel(topStage?.stage)}
+                            {filteredTopStage?.label ||
+                              getPhaseLabel(filteredTopStage?.stage)}
                           </div>
                         </div>
+
                         <div className="text-right">
-                          <div className="small text-muted">Share of pipeline</div>
+                          <div className="small text-muted">Pipeline Share</div>
                           <div className="font-weight-bold">
-                            {topStage?.percentage || 0}%
+                            {filteredTopStage?.percentage || 0}%
                           </div>
                         </div>
                       </div>
+
                       <div className="mt-2 text-muted small">
-                        {pipelineBottleneck?.insight || "Pipeline looks balanced."}
+                        Click any stage below to filter the scenario forecast by that phase.
                       </div>
                     </div>
                   </div>
                 ) : null}
 
-                {stageDistribution.length > 0 ? (
+                {filteredStageDistribution.length > 0 ? (
                   <div>
-                    {stageDistribution.map((stage) => {
+                    {filteredStageDistribution.map((stage) => {
                       const phaseColorClass = getPhaseBadgeClass(stage?.stage);
+                      const isActive = selectedPhaseFilter === stage?.stage;
+
                       const barClass =
                         phaseColorClass === "badge-success"
                           ? "bg-success"
@@ -239,8 +568,18 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                           : "bg-secondary";
 
                       return (
-                        <div key={stage.stage} className="mb-3">
-                          <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                        <button
+                          key={stage.stage}
+                          type="button"
+                          className={`w-100 text-left border rounded p-3 mb-3 bg-white ${
+                            isActive ? "shadow-sm border-primary" : ""
+                          }`}
+                          onClick={() => togglePhaseCrossFilter(stage.stage)}
+                          style={{
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                             <div className="d-flex align-items-center gap-2">
                               <span className={`badge ${phaseColorClass}`}>
                                 {stage?.label || getPhaseLabel(stage?.stage)}
@@ -248,6 +587,9 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                               <span className="text-muted small">
                                 {stage?.count || 0} items
                               </span>
+                              {isActive ? (
+                                <span className="badge badge-dark">Selected</span>
+                              ) : null}
                             </div>
 
                             <div className="text-muted small">
@@ -265,19 +607,20 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                               role="progressbar"
                               style={{
                                 width: `${stage?.percentage || 0}%`,
+                                opacity: isActive ? 1 : 0.85,
                               }}
                               aria-valuenow={stage?.percentage || 0}
                               aria-valuemin="0"
                               aria-valuemax="100"
                             />
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 ) : (
                   <div className="text-center text-muted py-4">
-                    No stage distribution available.
+                    No stages match the selected filters.
                   </div>
                 )}
               </div>
