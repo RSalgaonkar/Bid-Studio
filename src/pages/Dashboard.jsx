@@ -351,7 +351,7 @@ function Dashboard({ setActivePage, theme, toggleTheme, openCommandPalette }) {
                       type="button"
                       className="btn btn-sm btn-outline-primary"
                       onClick={() => setIsScenarioDrawerOpen(true)}
-                      disabled={!selectedPhaseFilter}
+                      // disabled={!selectedPhaseFilter}
                       title={
                         selectedPhaseFilter
                           ? "Open scenario simulator"
