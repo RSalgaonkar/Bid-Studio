@@ -1,0 +1,46 @@
+body {
+  background-color: #f4f6f9;
+  font-family: Arial, sans-serif;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.table th,
+.table td {
+  vertical-align: middle;
+}
+
+.nav-link {
+  cursor: pointer;
+}
+
+.sidebar .btn {
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.sidebar .btn-link:hover {
+  text-decoration: none;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
