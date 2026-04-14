@@ -1,0 +1,357 @@
+:root {
+  --bid-bg: #f5f7fb;
+  --bid-surface: #ffffff;
+  --bid-surface-soft: #f8fafc;
+  --bid-surface-muted: #f1f5f9;
+  --bid-border: #dbe3ee;
+  --bid-border-strong: #c8d4e3;
+  --bid-text: #172033;
+  --bid-text-muted: #667085;
+  --bid-text-faint: #94a3b8;
+
+  --bid-primary: #0f766e;
+  --bid-primary-hover: #0b5e58;
+  --bid-primary-soft: rgba(15, 118, 110, 0.1);
+
+  --bid-warning: #b45309;
+  --bid-warning-soft: rgba(180, 83, 9, 0.12);
+
+  --bid-success: #15803d;
+  --bid-success-soft: rgba(21, 128, 61, 0.12);
+
+  --bid-danger: #b42318;
+  --bid-danger-hover: #912018;
+  --bid-danger-soft: rgba(180, 35, 24, 0.12);
+
+  --bid-shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --bid-shadow-md: 0 18px 40px rgba(15, 23, 42, 0.1);
+
+  --bid-radius-lg: 20px;
+  --bid-radius-md: 14px;
+  --bid-radius-sm: 10px;
+
+  --bid-transition: all 0.2s ease;
+}
+
+.bid-filters-card {
+  position: relative;
+  padding: 24px;
+  border: 1px solid var(--bid-border);
+  border-radius: var(--bid-radius-lg);
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: var(--bid-shadow-sm);
+  overflow: hidden;
+}
+
+.bid-filters-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+}
+
+.bid-filters-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.bid-filters-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bid-filters-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--bid-primary-soft);
+  color: var(--bid-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bid-filters-title {
+  margin: 0;
+  color: var(--bid-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.bid-filters-subtitle {
+  margin: 0;
+  color: var(--bid-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.bid-filters-subtitle strong {
+  color: var(--bid-text);
+}
+
+.bid-filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.bid-export-btn,
+.bid-delete-selected-btn,
+.bid-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: var(--bid-transition);
+  border: 1px solid var(--bid-border);
+}
+
+.bid-export-btn {
+  background: var(--bid-primary);
+  color: #fff;
+  border-color: var(--bid-primary);
+}
+
+.bid-export-btn:hover {
+  background: var(--bid-primary-hover);
+  border-color: var(--bid-primary-hover);
+}
+
+.bid-delete-selected-btn {
+  background: var(--bid-danger);
+  color: #fff;
+  border-color: var(--bid-danger);
+}
+
+.bid-delete-selected-btn:hover {
+  background: var(--bid-danger-hover);
+  border-color: var(--bid-danger-hover);
+}
+
+.bid-clear-btn {
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--bid-text);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+.bid-clear-btn:hover {
+  border-color: var(--bid-primary);
+  color: var(--bid-primary);
+  transform: translateY(-1px);
+}
+
+.bid-clear-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--bid-surface-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bid-filters-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(2, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.bid-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bid-filter-label {
+  color: var(--bid-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bid-search-wrap {
+  position: relative;
+}
+
+.bid-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--bid-text-faint);
+  pointer-events: none;
+}
+
+.bid-filter-input,
+.bid-filter-select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--bid-border);
+  border-radius: var(--bid-radius-md);
+  background: var(--bid-surface);
+  color: var(--bid-text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  transition: var(--bid-transition);
+}
+
+.bid-filter-input {
+  padding: 0 16px 0 42px;
+}
+
+.bid-filter-select {
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.bid-filter-input::placeholder {
+  color: var(--bid-text-faint);
+}
+
+.bid-filter-input:focus,
+.bid-filter-select:focus {
+  border-color: var(--bid-primary);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+}
+
+.bid-quick-filters,
+.active-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.bid-quick-filters {
+  margin-bottom: 14px;
+}
+
+.quick-filter-chip,
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--bid-border);
+  border-radius: 999px;
+  background: var(--bid-surface);
+  color: var(--bid-text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: var(--bid-transition);
+}
+
+.quick-filter-chip:hover,
+.active-filter-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--bid-border-strong);
+  color: var(--bid-text);
+}
+
+.quick-filter-chip.active {
+  background: var(--bid-primary-soft);
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--bid-primary);
+}
+
+.quick-filter-chip.active.warning {
+  background: var(--bid-warning-soft);
+  border-color: rgba(180, 83, 9, 0.18);
+  color: var(--bid-warning);
+}
+
+.quick-filter-chip.active.success {
+  background: var(--bid-success-soft);
+  border-color: rgba(21, 128, 61, 0.18);
+  color: var(--bid-success);
+}
+
+.quick-filter-chip.active.danger {
+  background: var(--bid-danger-soft);
+  border-color: rgba(180, 35, 24, 0.18);
+  color: var(--bid-danger);
+}
+
+.active-filter-chips {
+  padding-top: 14px;
+  border-top: 1px dashed var(--bid-border);
+}
+
+.active-filter-chip {
+  background: var(--bid-surface-soft);
+  color: var(--bid-text);
+}
+
+.active-filter-chip span {
+  color: var(--bid-text-faint);
+}
+
+@media (max-width: 991px) {
+  .bid-filters-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bid-filter-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .bid-filters-card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .bid-filters-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bid-filters-actions {
+    justify-content: stretch;
+    flex-direction: column;
+  }
+
+  .bid-export-btn,
+  .bid-delete-selected-btn,
+  .bid-clear-btn {
+    width: 100%;
+  }
+
+  .bid-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-filter-chip,
+  .active-filter-chip {
+    width: 100%;
+    justify-content: center;
+  }
+}

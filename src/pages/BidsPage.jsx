@@ -11,6 +11,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import ThemeToggle from "../components/ThemeToggle";
 import usePagination from "../hooks/usePagination";
 import VirtualizedSmartBidTable from "../components/VirtualizedSmartBidTable";
+import "./BidsPage.css";
 
 const INITIAL_FORM = {
   id: null,
@@ -60,11 +61,8 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
       const client = (bid?.client || "").toLowerCase();
       const status = bid?.status || "";
 
-      const matchesSearch =
-        title.includes(search) || client.includes(search);
-
-      const matchesStatus =
-        statusFilter === "all" ? true : status === statusFilter;
+      const matchesSearch = title.includes(search) || client.includes(search);
+      const matchesStatus = statusFilter === "all" ? true : status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -278,7 +276,7 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
     <div className="app-layout">
       <Sidebar activePage="bids" setActivePage={setActivePage} />
 
-      <div className="main-content p-4">
+      <div className="main-content p-4 bids-page">
         <Header
           title="Bids"
           subtitle="Track and manage all submitted bids."
@@ -289,7 +287,7 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
 
         <div className="row mb-4">
           <div className="col-md-4 mb-3">
-            <div className="card stat-card border-0 shadow-sm">
+            <div className="card stat-card bid-stat-card border-0 shadow-sm h-100">
               <div className="card-body">
                 <p className="text-muted mb-1">Total Bids</p>
                 <h4 className="mb-0 font-weight-bold">{bids.length}</h4>
@@ -298,7 +296,7 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
           </div>
 
           <div className="col-md-4 mb-3">
-            <div className="card stat-card border-0 shadow-sm">
+            <div className="card stat-card bid-stat-card border-0 shadow-sm h-100">
               <div className="card-body">
                 <p className="text-muted mb-1">Approved</p>
                 <h4 className="mb-0 font-weight-bold">{approvedCount}</h4>
@@ -307,7 +305,7 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
           </div>
 
           <div className="col-md-4 mb-3">
-            <div className="card stat-card border-0 shadow-sm">
+            <div className="card stat-card bid-stat-card border-0 shadow-sm h-100">
               <div className="card-body">
                 <p className="text-muted mb-1">Pending</p>
                 <h4 className="mb-0 font-weight-bold">{pendingCount}</h4>
@@ -318,13 +316,19 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
 
         <div className="row">
           <div className="col-lg-4 mb-4">
-            <div className="card form-card border-0 shadow-sm">
+            <div className="card form-card bid-form-card border-0 shadow-sm">
               <div className="card-body">
-                <h5 className="mb-3 font-weight-bold">
-                  {isEdit ? "Edit Bid" : "Add Bid"}
-                </h5>
+                <div className="bid-section-head mb-3">
+                  <span className="bid-section-kicker">Bid Entry</span>
+                  <h5 className="mb-1 font-weight-bold">
+                    {isEdit ? "Edit Bid" : "Add Bid"}
+                  </h5>
+                  <p className="text-muted small mb-0">
+                    Fill the form and save changes instantly.
+                  </p>
+                </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="bid-form">
                   <div className="form-group">
                     <label>Bid Title</label>
                     <input
@@ -386,14 +390,14 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                     </select>
                   </div>
 
-                  <button type="submit" className="btn btn-primary btn-block">
+                  <button type="submit" className="btn btn-primary btn-block bid-primary-btn">
                     {isEdit ? "Update Bid" : "Save Bid"}
                   </button>
 
                   {isEdit && (
                     <button
                       type="button"
-                      className="btn btn-light border btn-block mt-2"
+                      className="btn btn-light border btn-block mt-2 bid-secondary-btn"
                       onClick={resetForm}
                     >
                       Cancel Edit
@@ -405,9 +409,9 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
           </div>
 
           <div className="col-lg-8 mb-4">
-            <div className="card soft-card border-0 shadow-sm">
+            <div className="card soft-card bid-directory-card border-0 shadow-sm">
               <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                <div className="bid-directory-head d-flex justify-content-between align-items-center flex-wrap mb-3">
                   <div>
                     <h5 className="mb-1 font-weight-bold">Bids Directory</h5>
                     <p className="text-muted small mb-0">
@@ -416,192 +420,127 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                   </div>
                 </div>
 
-                <div className="row mb-3">
-                  <div className="col-md-8 mb-2 mb-md-0">
-                    <SearchBar
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                      placeholder="Search by bid title or client"
-                    />
+                <div className="bid-toolbar">
+                  <div className="row mb-3">
+                    <div className="col-md-8 mb-2 mb-md-0">
+                      <SearchBar
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        placeholder="Search by bid title or client"
+                      />
+                    </div>
+
+                    <div className="col-md-4">
+                      <select
+                        className="form-control bid-toolbar-select"
+                        value={statusFilter}
+                        onChange={handleStatusChange}
+                      >
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="col-md-4">
-                    <select
-                      className="form-control"
-                      value={statusFilter}
-                      onChange={handleStatusChange}
-                    >
-                      <option value="all">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                  </div>
-                </div>
+                  <div className="bid-presets-block mb-3">
+                    <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                      <span className="small font-weight-bold text-muted mr-2">
+                        Smart Presets:
+                      </span>
 
-                <div className="mb-3">
-                  <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
-                    <span className="small font-weight-bold text-muted mr-2">Smart Presets:</span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary bid-chip-btn"
+                        onClick={() => applySmartPreset("all")}
+                      >
+                        All
+                      </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() => applySmartPreset("all")}
-                    >
-                      All
-                    </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-warning bid-chip-btn"
+                        onClick={() => applySmartPreset("pending")}
+                      >
+                        Pending
+                      </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-warning"
-                      onClick={() => applySmartPreset("pending")}
-                    >
-                      Pending
-                    </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-success bid-chip-btn"
+                        onClick={() => applySmartPreset("approved")}
+                      >
+                        Approved
+                      </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-success"
-                      onClick={() => applySmartPreset("approved")}
-                    >
-                      Approved
-                    </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger bid-chip-btn"
+                        onClick={() => applySmartPreset("rejected")}
+                      >
+                        Rejected
+                      </button>
+                    </div>
 
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => applySmartPreset("rejected")}
-                    >
-                      Rejected
-                    </button>
-                  </div>
+                    <div className="bid-saved-views border rounded p-3">
+                      <div className="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                        <h6 className="mb-2 mb-md-0 font-weight-bold">Saved Views</h6>
 
-                  <div className="border rounded p-3 bg-light">
-                    <div className="d-flex flex-wrap align-items-center justify-content-between mb-2">
-                      <h6 className="mb-2 mb-md-0 font-weight-bold">Saved Views</h6>
+                        <div className="d-flex flex-wrap align-items-center gap-2 bid-saved-views-actions">
+                          <input
+                            type="text"
+                            className="form-control form-control-sm bid-view-input"
+                            value={newViewName}
+                            onChange={(e) => setNewViewName(e.target.value)}
+                            placeholder="Enter view name"
+                          />
 
-                      <div className="d-flex flex-wrap align-items-center gap-2">
-                        <input
-                          type="text"
-                          className="form-control form-control-sm"
-                          style={{ minWidth: "180px" }}
-                          value={newViewName}
-                          onChange={(e) => setNewViewName(e.target.value)}
-                          placeholder="Enter view name"
-                        />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={saveCurrentView}
+                          >
+                            Save Current View
+                          </button>
+                        </div>
+                      </div>
 
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-primary"
-                          onClick={saveCurrentView}
-                        >
-                          Save Current View
-                        </button>
+                      <div className="d-flex flex-wrap gap-2">
+                        {savedViews.length === 0 ? (
+                          <span className="text-muted small">No saved views yet.</span>
+                        ) : (
+                          savedViews.map((view) => (
+                            <div
+                              key={view.id}
+                              className={`bid-view-pill d-flex align-items-center px-2 py-1 ${
+                                activeViewId === view.id ? "active" : ""
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-link text-decoration-none p-0 mr-2 bid-view-pill-link"
+                                onClick={() => applyView(view)}
+                              >
+                                {view.name}
+                              </button>
+
+                              {view.id > 4 && (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link text-danger p-0 bid-view-pill-delete"
+                                  onClick={() => deleteSavedView(view.id)}
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
-
-                    <div className="d-flex flex-wrap gap-2">
-                      {savedViews.length === 0 ? (
-                        <span className="text-muted small">No saved views yet.</span>
-                      ) : (
-                        savedViews.map((view) => (
-                          <div
-                            key={view.id}
-                            className={`d-flex align-items-center border rounded px-2 py-1 ${
-                              activeViewId === view.id ? "bg-white shadow-sm" : ""
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-link text-decoration-none p-0 mr-2"
-                              onClick={() => applyView(view)}
-                            >
-                              {view.name}
-                            </button>
-
-                            {view.id > 4 && (
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-link text-danger p-0"
-                                onClick={() => deleteSavedView(view.id)}
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
                   </div>
                 </div>
-
-                {/* <div className="table-responsive">
-                  <table className="table modern-table">
-                    <thead>
-                      <tr>
-                        <th>Title</th>
-                        <th>Client</th>
-                        <th>Amount</th>
-                        <th>Deadline</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {filteredBids.length === 0 ? (
-                        <tr>
-                          <td colSpan="6" className="text-center py-4">
-                            {searchTerm || statusFilter !== "all"
-                              ? "No matching bids found."
-                              : "No bids added yet."}
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedData.map((bid) => (
-                          <tr key={bid?.id}>
-                            <td>{bid?.title || "-"}</td>
-                            <td>{bid?.client || "-"}</td>
-                            <td>₹ {Number(bid?.amount || 0).toLocaleString()}</td>
-                            <td>{bid?.deadline || "-"}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  bid?.status === "approved"
-                                    ? "badge-success"
-                                    : bid?.status === "rejected"
-                                    ? "badge-danger"
-                                    : "badge-warning"
-                                }`}
-                              >
-                                {bid?.status || "unknown"}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-warning mr-2"
-                                onClick={() => handleEdit(bid)}
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-danger"
-                                onClick={() =>
-                                  handleDeleteClick(bid?.id, bid?.title)
-                                }
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div> */}
 
                 <VirtualizedSmartBidTable
                   bids={paginatedData}
@@ -616,12 +555,14 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                   }
                 />
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={filteredBids.length}
-                  itemsPerPage={5}
-                  onPageChange={goToPage}
-                />
+                <div className="bid-pagination-wrap">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={filteredBids.length}
+                    itemsPerPage={5}
+                    onPageChange={goToPage}
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -1,0 +1,235 @@
+.bid-management-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bid-table-card {
+  background: #ffffff;
+  border: 1px solid #dbe3ee;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.bid-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e9eef5;
+  background: #fbfdff;
+}
+
+.bid-selection-summary {
+  color: #475467;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.bid-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.bid-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.bid-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 14px 16px;
+  background: #f8fafc;
+  color: #667085;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.bid-table tbody td {
+  padding: 16px;
+  border-bottom: 1px solid #eef2f7;
+  color: #172033;
+  font-size: 0.94rem;
+  vertical-align: middle;
+  background: #ffffff;
+}
+
+.bid-table tbody tr:hover td {
+  background: #fbfdff;
+}
+
+.selected-row td {
+  background: rgba(15, 118, 110, 0.06) !important;
+}
+
+.checkbox-col {
+  width: 56px;
+  text-align: center;
+}
+
+.checkbox-col input {
+  width: 16px;
+  height: 16px;
+  accent-color: #0f766e;
+  cursor: pointer;
+}
+
+.bid-title {
+  font-weight: 700;
+  color: #101828;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-badge.pending {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
+}
+
+.status-badge.approved {
+  background: rgba(21, 128, 61, 0.12);
+  color: #15803d;
+}
+
+.status-badge.rejected {
+  background: rgba(180, 35, 24, 0.12);
+  color: #b42318;
+}
+
+.bid-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.bid-empty-state h4 {
+  margin: 0 0 6px;
+  color: #172033;
+  font-size: 1.05rem;
+}
+
+.bid-empty-state p {
+  margin: 0;
+  color: #667085;
+}
+
+.bid-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.bid-modal {
+  width: 100%;
+  max-width: 460px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  padding: 24px;
+  animation: modalPop 0.2s ease;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.bid-modal-header h3 {
+  margin: 0 0 10px;
+  color: #101828;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.bid-modal-text {
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.bid-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.modal-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.modal-btn.secondary {
+  background: #f8fafc;
+  color: #172033;
+  border-color: #dbe3ee;
+}
+
+.modal-btn.secondary:hover {
+  background: #eef2f7;
+}
+
+.modal-btn.danger {
+  background: #b42318;
+  color: #ffffff;
+}
+
+.modal-btn.danger:hover {
+  background: #912018;
+}
+
+@media (max-width: 767px) {
+  .bid-table-toolbar {
+    padding: 14px 16px;
+  }
+
+  .bid-modal {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .bid-modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-btn {
+    width: 100%;
+  }
+}
