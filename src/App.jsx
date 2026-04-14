@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Dashboard from "./pages/Dashboard";
+import DashboardPage from "./pages/Dashboard";
 import ClientsPage from "./pages/ClientsPage";
 import BidsPage from "./pages/BidsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -17,9 +17,17 @@ function App() {
 
   return (
     <>
-      {activePage === "dashboard" && <Dashboard {...sharedProps} />}
-      {activePage === "clients" && <ClientsPage {...sharedProps} />}
-      {activePage === "bids" && <BidsPage {...sharedProps} />}
+      {activePage === "dashboard" && (
+        <DashboardPage setActivePage={setActivePage} theme={theme} toggleTheme={toggleTheme} />
+      )}
+
+      {activePage === "clients" && (
+        <ClientsPage setActivePage={setActivePage} theme={theme} toggleTheme={toggleTheme} />
+      )}
+
+      {activePage === "bids" && (
+        <BidsPage setActivePage={setActivePage} theme={theme} toggleTheme={toggleTheme} />
+      )}
       {activePage === "analytics" && <AnalyticsPage {...sharedProps} />}
     </>
   );

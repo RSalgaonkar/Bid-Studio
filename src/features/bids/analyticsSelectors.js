@@ -1,28 +1,37 @@
-export const selectAnalyticsSummary = (state) => {
-  const bids = state.bids.list;
-  const clients = state.clients.list;
+import { createSelector } from "@reduxjs/toolkit";
 
-  const totalBids = bids.length;
-  const totalClients = clients.length;
-  const totalPipelineValue = bids.reduce((sum, bid) => sum + Number(bid.amount), 0);
-  const wonValue = bids
-    .filter((bid) => bid.status === "won")
-    .reduce((sum, bid) => sum + Number(bid.amount), 0);
+const selectBids = (state) => state.bids?.list || [];
+const selectClients = (state) => state.clients?.list || [];
 
-  const avgBidValue = totalBids > 0 ? Math.round(totalPipelineValue / totalBids) : 0;
+export const selectAnalyticsSummary = createSelector(
+  [selectBids, selectClients],
+  (bids, clients) => {
+    const totalBids = bids.length;
+    const totalClients = clients.length;
 
-  return {
-    totalBids,
-    totalClients,
-    totalPipelineValue,
-    wonValue,
-    avgBidValue,
-  };
-};
+    const totalPipelineValue = bids.reduce(
+      (sum, bid) => sum + Number(bid?.amount || 0),
+      0
+    );
 
-export const selectStatusDistribution = (state) => {
-  const bids = state.bids.list;
+    const wonValue = bids
+      .filter((bid) => bid?.status === "won")
+      .reduce((sum, bid) => sum + Number(bid?.amount || 0), 0);
 
+    const avgBidValue =
+      totalBids > 0 ? Math.round(totalPipelineValue / totalBids) : 0;
+
+    return {
+      totalBids,
+      totalClients,
+      totalPipelineValue,
+      wonValue,
+      avgBidValue,
+    };
+  }
+);
+
+export const selectStatusDistribution = createSelector([selectBids], (bids) => {
   const counts = {
     lead: 0,
     sent: 0,
@@ -31,8 +40,9 @@ export const selectStatusDistribution = (state) => {
   };
 
   bids.forEach((bid) => {
-    if (counts[bid.status] !== undefined) {
-      counts[bid.status] += 1;
+    const status = bid?.status;
+    if (counts[status] !== undefined) {
+      counts[status] += 1;
     }
   });
 
@@ -40,11 +50,9 @@ export const selectStatusDistribution = (state) => {
     labels: ["Lead", "Sent", "Won", "Lost"],
     values: [counts.lead, counts.sent, counts.won, counts.lost],
   };
-};
+});
 
-export const selectRevenueByStatus = (state) => {
-  const bids = state.bids.list;
-
+export const selectRevenueByStatus = createSelector([selectBids], (bids) => {
   const totals = {
     lead: 0,
     sent: 0,
@@ -53,8 +61,9 @@ export const selectRevenueByStatus = (state) => {
   };
 
   bids.forEach((bid) => {
-    if (totals[bid.status] !== undefined) {
-      totals[bid.status] += Number(bid.amount);
+    const status = bid?.status;
+    if (totals[status] !== undefined) {
+      totals[status] += Number(bid?.amount || 0);
     }
   });
 
@@ -62,54 +71,55 @@ export const selectRevenueByStatus = (state) => {
     labels: ["Lead", "Sent", "Won", "Lost"],
     values: [totals.lead, totals.sent, totals.won, totals.lost],
   };
-};
+});
 
-export const selectTopClients = (state) => {
-  const bids = state.bids.list;
-  const clients = state.clients.list;
+export const selectTopClients = createSelector(
+  [selectBids, selectClients],
+  (bids, clients) => {
+    const totalsByClient = {};
 
-  const totalsByClient = {};
+    bids.forEach((bid) => {
+      const clientId = bid?.clientId;
+      if (clientId == null) return;
 
-  bids.forEach((bid) => {
-    totalsByClient[bid.clientId] =
-      (totalsByClient[bid.clientId] || 0) + Number(bid.amount);
-  });
+      totalsByClient[clientId] =
+        (totalsByClient[clientId] || 0) + Number(bid?.amount || 0);
+    });
 
-  return Object.entries(totalsByClient)
-    .map(([clientId, total]) => {
-      const client = clients.find((item) => item.id === Number(clientId));
-      return {
-        clientId: Number(clientId),
-        clientName: client ? client.name : "Unknown Client",
-        total,
-      };
-    })
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
-};
+    return Object.entries(totalsByClient)
+      .map(([clientId, total]) => {
+        const client = clients.find((item) => item?.id === Number(clientId));
 
-export const selectMonthlyTrend = (state) => {
-  const bids = state.bids.list;
+        return {
+          clientId: Number(clientId),
+          clientName: client?.name || "Unknown Client",
+          total,
+        };
+      })
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }
+);
 
+export const selectMonthlyTrend = createSelector([selectBids], (bids) => {
   const monthMap = {};
 
   bids.forEach((bid) => {
-    if (!bid.dueDate) return;
+    if (!bid?.dueDate) return;
 
     const date = new Date(bid.dueDate);
+    if (Number.isNaN(date.getTime())) return;
+
     const monthKey = date.toLocaleString("default", {
       month: "short",
       year: "numeric",
     });
 
-    monthMap[monthKey] = (monthMap[monthKey] || 0) + Number(bid.amount);
+    monthMap[monthKey] = (monthMap[monthKey] || 0) + Number(bid?.amount || 0);
   });
 
-  const labels = Object.keys(monthMap);
-  const values = Object.values(monthMap);
-
   return {
-    labels,
-    values,
+    labels: Object.keys(monthMap),
+    values: Object.values(monthMap),
   };
-};
+});
