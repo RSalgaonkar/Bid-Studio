@@ -9,13 +9,22 @@ import SmartAlertsCard from "../components/SmartAlertsCard";
 import {
   selectPipelineHealth,
   selectSmartAlerts,
+  selectStageConversion,
+  selectPipelineBottleneck,
 } from "../selectors/pipelineSelectors";
+import WeightedForecastCard from "../components/WeightedForecastCard";
+import { selectWeightedForecast } from "../selectors/pipelineSelectors";
+import ConversionInsightsCard from "../components/ConversionInsightsCard";
+import BottleneckCard from "../components/BottleneckCard";
 
 function Dashboard({ setActivePage, theme, toggleTheme }) {
   const clients = useSelector((state) => state.clients?.list || []);
   const bids = useSelector((state) => state.bids?.list || []);
   const pipelineHealth = useSelector(selectPipelineHealth);
   const smartAlerts = useSelector(selectSmartAlerts);
+  const weightedForecast = useSelector(selectWeightedForecast);
+  const stageConversion = useSelector(selectStageConversion);
+  const pipelineBottleneck = useSelector(selectPipelineBottleneck);
 
   const totalPipeline = bids.reduce(
     (sum, bid) => sum + Number(bid?.amount || 0),
@@ -108,6 +117,22 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
 
           <div className="col-lg-7 mb-4">
             <SmartAlertsCard alerts={smartAlerts} />
+          </div>
+        </div>
+
+        <div className="row mb-4">
+          <div className="col-lg-12 mb-4">
+            <WeightedForecastCard data={weightedForecast} />
+          </div>
+        </div>
+
+        <div className="row mb-4">
+          <div className="col-lg-7 mb-4">
+            <ConversionInsightsCard data={stageConversion} />
+          </div>
+
+          <div className="col-lg-5 mb-4">
+            <BottleneckCard data={pipelineBottleneck} />
           </div>
         </div>
 

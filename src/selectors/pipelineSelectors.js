@@ -201,3 +201,154 @@ export const selectSmartAlerts = createSelector([selectBids], (bids) => {
 
   return alerts;
 });
+
+export const selectWeightedForecast = createSelector([selectBids], (bids) => {
+  const probabilityMap = {
+    lead: 0.2,
+    sent: 0.5,
+    won: 1,
+    lost: 0,
+  };
+
+  let totalOpenPipeline = 0;
+  let weightedForecast = 0;
+  let committedRevenue = 0;
+
+  const breakdown = {
+    lead: 0,
+    sent: 0,
+    won: 0,
+    lost: 0,
+  };
+
+  bids.forEach((bid) => {
+    const status = bid?.status || "lead";
+    const amount = Number(bid?.amount || 0);
+    const probability = probabilityMap[status] ?? 0;
+
+    breakdown[status] = (breakdown[status] || 0) + amount;
+
+    if (status !== "lost") {
+      totalOpenPipeline += amount;
+    }
+
+    weightedForecast += amount * probability;
+
+    if (status === "won") {
+      committedRevenue += amount;
+    }
+  });
+
+  const forecastGap = totalOpenPipeline - weightedForecast;
+
+  return {
+    probabilityMap,
+    totalOpenPipeline,
+    weightedForecast: Math.round(weightedForecast),
+    committedRevenue,
+    forecastGap: Math.round(forecastGap),
+    breakdown,
+  };
+});
+
+export const selectStageConversion = createSelector([selectBids], (bids) => {
+  const total = bids.length;
+
+  const leadCount = bids.filter((bid) => bid.status === "lead").length;
+  const sentCount = bids.filter((bid) => bid.status === "sent").length;
+  const wonCount = bids.filter((bid) => bid.status === "won").length;
+  const lostCount = bids.filter((bid) => bid.status === "lost").length;
+
+  const leadToSent =
+    leadCount > 0 ? Math.round((sentCount / leadCount) * 100) : 0;
+
+  const sentToWon =
+    sentCount > 0 ? Math.round((wonCount / sentCount) * 100) : 0;
+
+  const overallWinRate =
+    total > 0 ? Math.round((wonCount / total) * 100) : 0;
+
+  const lossRate =
+    total > 0 ? Math.round((lostCount / total) * 100) : 0;
+
+  return {
+    total,
+    leadCount,
+    sentCount,
+    wonCount,
+    lostCount,
+    leadToSent,
+    sentToWon,
+    overallWinRate,
+    lossRate,
+  };
+});
+
+export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
+  const stageCounts = {
+    lead: 0,
+    sent: 0,
+    won: 0,
+    lost: 0,
+  };
+
+  const stageAmounts = {
+    lead: 0,
+    sent: 0,
+    won: 0,
+    lost: 0,
+  };
+
+  bids.forEach((bid) => {
+    const status = bid?.status || "lead";
+    const amount = Number(bid?.amount || 0);
+
+    stageCounts[status] = (stageCounts[status] || 0) + 1;
+    stageAmounts[status] = (stageAmounts[status] || 0) + amount;
+  });
+
+  const total = bids.length;
+
+  const stageDistribution = Object.keys(stageCounts).map((stage) => {
+    const count = stageCounts[stage];
+    const amount = stageAmounts[stage];
+    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+
+    return {
+      stage,
+      count,
+      amount,
+      percentage,
+    };
+  });
+
+  const sortedStages = [...stageDistribution].sort(
+    (a, b) => b.percentage - a.percentage
+  );
+
+  const topStage = sortedStages[0] || null;
+
+  let severity = "healthy";
+  let insight = "Pipeline flow looks balanced.";
+
+  if (topStage) {
+    if (topStage.percentage >= 50) {
+      severity = "high";
+      insight = `Critical bottleneck: ${topStage.stage} stage holds ${topStage.percentage}% of all bids.`;
+    } else if (topStage.percentage >= 35) {
+      severity = "medium";
+      insight = `Possible bottleneck: ${topStage.stage} stage holds ${topStage.percentage}% of all bids.`;
+    } else if (topStage.percentage >= 25) {
+      severity = "low";
+      insight = `Watch ${topStage.stage} stage closely. It holds ${topStage.percentage}% of the pipeline.`;
+    }
+  }
+
+  return {
+    total,
+    topStage,
+    severity,
+    insight,
+    stageDistribution,
+  };
+});
