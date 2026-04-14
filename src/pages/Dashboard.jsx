@@ -24,7 +24,7 @@ import {
   PHASE_CONFIG,
 } from "../selectors/pipelineSelectors";
 
-function Dashboard({ setActivePage, theme, toggleTheme }) {
+function Dashboard({ setActivePage, theme, toggleTheme, openCommandPalette }) {
   const {
     totalPipeline = 0,
     newBids = [],
@@ -255,6 +255,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           buttonText="+ New Bid"
           onButtonClick={() => setActivePage("bids")}
           extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
+          onOpenCommandPalette={openCommandPalette}
         />
 
         <div className="row mb-4">
