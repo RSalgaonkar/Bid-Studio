@@ -10,6 +10,7 @@ import AppToast from "../components/AppToast";
 import ConfirmModal from "../components/ConfirmModal";
 import ThemeToggle from "../components/ThemeToggle";
 import usePagination from "../hooks/usePagination";
+import VirtualizedSmartBidTable from "../components/VirtualizedSmartBidTable";
 
 const INITIAL_FORM = {
   id: null,
@@ -354,7 +355,7 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                   </div>
                 </div>
 
-                <div className="table-responsive">
+                {/* <div className="table-responsive">
                   <table className="table modern-table">
                     <thead>
                       <tr>
@@ -420,7 +421,19 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                       )}
                     </tbody>
                   </table>
-                </div>
+                </div> */}
+
+                <VirtualizedSmartBidTable
+                  data={paginatedData}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteClick}
+                  loading={false}
+                  emptyMessage={
+                    searchTerm || statusFilter !== "all"
+                      ? "No matching bids found."
+                      : "No bids added yet."
+                  }
+                />
 
                 <Pagination
                   currentPage={currentPage}
