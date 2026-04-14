@@ -29,6 +29,15 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
   const [isEdit, setIsEdit] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [savedViews, setSavedViews] = useState([
+    { id: 1, name: "All Bids", searchTerm: "", statusFilter: "all" },
+    { id: 2, name: "Pending Only", searchTerm: "", statusFilter: "pending" },
+    { id: 3, name: "Approved Only", searchTerm: "", statusFilter: "approved" },
+    { id: 4, name: "Rejected Only", searchTerm: "", statusFilter: "rejected" },
+  ]);
+
+  const [newViewName, setNewViewName] = useState("");
+  const [activeViewId, setActiveViewId] = useState(null);
 
   const [toast, setToast] = useState({
     show: false,
@@ -103,6 +112,81 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
 
   const handleStatusChange = (event) => {
     setStatusFilter(event.target.value);
+    resetPage();
+  };
+
+  const applyView = (view) => {
+    setSearchTerm(view.searchTerm || "");
+    setStatusFilter(view.statusFilter || "all");
+    setActiveViewId(view.id);
+    resetPage();
+  };
+
+  const saveCurrentView = () => {
+    const trimmedName = newViewName.trim();
+
+    if (!trimmedName) {
+      showToast("View Name Required", "Please enter a view name.", "warning");
+      return;
+    }
+
+    const newView = {
+      id: Date.now(),
+      name: trimmedName,
+      searchTerm,
+      statusFilter,
+    };
+
+    setSavedViews((prev) => [...prev, newView]);
+    setActiveViewId(newView.id);
+    setNewViewName("");
+    showToast("View Saved", `${trimmedName} was saved successfully.`, "success");
+  };
+
+  const deleteSavedView = (viewId) => {
+    const viewToDelete = savedViews.find((view) => view.id === viewId);
+
+    setSavedViews((prev) => prev.filter((view) => view.id !== viewId));
+
+    if (activeViewId === viewId) {
+      setActiveViewId(null);
+    }
+
+    showToast(
+      "View Deleted",
+      `${viewToDelete?.name || "Saved view"} was removed successfully.`,
+      "danger"
+    );
+  };
+
+  const applySmartPreset = (presetKey) => {
+    switch (presetKey) {
+      case "high-value":
+        setSearchTerm("");
+        setStatusFilter("all");
+        setActiveViewId(null);
+        break;
+      case "pending":
+        setSearchTerm("");
+        setStatusFilter("pending");
+        setActiveViewId(null);
+        break;
+      case "approved":
+        setSearchTerm("");
+        setStatusFilter("approved");
+        setActiveViewId(null);
+        break;
+      case "rejected":
+        setSearchTerm("");
+        setStatusFilter("rejected");
+        setActiveViewId(null);
+        break;
+      default:
+        setSearchTerm("");
+        setStatusFilter("all");
+        setActiveViewId(null);
+    }
+
     resetPage();
   };
 
@@ -352,6 +436,102 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                       <option value="approved">Approved</option>
                       <option value="rejected">Rejected</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <span className="small font-weight-bold text-muted mr-2">Smart Presets:</span>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => applySmartPreset("all")}
+                    >
+                      All
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-warning"
+                      onClick={() => applySmartPreset("pending")}
+                    >
+                      Pending
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-success"
+                      onClick={() => applySmartPreset("approved")}
+                    >
+                      Approved
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => applySmartPreset("rejected")}
+                    >
+                      Rejected
+                    </button>
+                  </div>
+
+                  <div className="border rounded p-3 bg-light">
+                    <div className="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                      <h6 className="mb-2 mb-md-0 font-weight-bold">Saved Views</h6>
+
+                      <div className="d-flex flex-wrap align-items-center gap-2">
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          style={{ minWidth: "180px" }}
+                          value={newViewName}
+                          onChange={(e) => setNewViewName(e.target.value)}
+                          placeholder="Enter view name"
+                        />
+
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary"
+                          onClick={saveCurrentView}
+                        >
+                          Save Current View
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="d-flex flex-wrap gap-2">
+                      {savedViews.length === 0 ? (
+                        <span className="text-muted small">No saved views yet.</span>
+                      ) : (
+                        savedViews.map((view) => (
+                          <div
+                            key={view.id}
+                            className={`d-flex align-items-center border rounded px-2 py-1 ${
+                              activeViewId === view.id ? "bg-white shadow-sm" : ""
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-link text-decoration-none p-0 mr-2"
+                              onClick={() => applyView(view)}
+                            >
+                              {view.name}
+                            </button>
+
+                            {view.id > 4 && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-link text-danger p-0"
+                                onClick={() => deleteSavedView(view.id)}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
 
