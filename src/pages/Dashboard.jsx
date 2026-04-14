@@ -4,16 +4,51 @@ import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import StatCard from "../components/StatCard";
 import ThemeToggle from "../components/ThemeToggle";
+import PipelineHealthCard from "../components/PipelineHealthCard";
+import SmartAlertsCard from "../components/SmartAlertsCard";
+import {
+  selectPipelineHealth,
+  selectSmartAlerts,
+} from "../selectors/pipelineSelectors";
 
 function Dashboard({ setActivePage, theme, toggleTheme }) {
-  const clients = useSelector((state) => state.clients.list);
-  const bids = useSelector((state) => state.bids.list);
+  const clients = useSelector((state) => state.clients?.list || []);
+  const bids = useSelector((state) => state.bids?.list || []);
+  const pipelineHealth = useSelector(selectPipelineHealth);
+  const smartAlerts = useSelector(selectSmartAlerts);
 
-  const totalPipeline = bids.reduce((sum, bid) => sum + bid.amount, 0);
-  const wonBids = bids.filter((bid) => bid.status === "won");
-  const activeClients = clients.filter((client) => client.status === "active");
-  const sentBids = bids.filter((bid) => bid.status === "sent");
-  const leads = bids.filter((bid) => bid.status === "lead");
+  const totalPipeline = bids.reduce(
+    (sum, bid) => sum + Number(bid?.amount || 0),
+    0
+  );
+
+  const wonBids = bids.filter((bid) => bid?.status === "won");
+  const lostBids = bids.filter((bid) => bid?.status === "lost");
+  const sentBids = bids.filter((bid) => bid?.status === "sent");
+  const leads = bids.filter((bid) => bid?.status === "lead");
+
+  const activeClients = clients.filter(
+    (client) => client?.status === "active"
+  );
+
+  const recentBids = [...bids]
+    .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+    .slice(0, 5);
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "won":
+        return "badge-success";
+      case "sent":
+        return "badge-primary";
+      case "lead":
+        return "badge-warning";
+      case "lost":
+        return "badge-danger";
+      default:
+        return "badge-secondary";
+    }
+  };
 
   return (
     <div className="app-layout">
@@ -37,6 +72,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
               color="primary"
             />
           </div>
+
           <div className="col-md-3 mb-3">
             <StatCard
               title="Won Bids"
@@ -45,6 +81,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
               color="success"
             />
           </div>
+
           <div className="col-md-3 mb-3">
             <StatCard
               title="Active Clients"
@@ -53,6 +90,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
               color="warning"
             />
           </div>
+
           <div className="col-md-3 mb-3">
             <StatCard
               title="Pending Proposals"
@@ -63,9 +101,19 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           </div>
         </div>
 
+        <div className="row mb-4">
+          <div className="col-lg-5 mb-4">
+            <PipelineHealthCard data={pipelineHealth} />
+          </div>
+
+          <div className="col-lg-7 mb-4">
+            <SmartAlertsCard alerts={smartAlerts} />
+          </div>
+        </div>
+
         <div className="row">
           <div className="col-lg-7 mb-4">
-            <div className="card soft-card border-0 shadow-sm">
+            <div className="card soft-card border-0 shadow-sm h-100">
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="mb-0 font-weight-bold">Recent Bids</h5>
@@ -88,26 +136,33 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {bids.map((bid) => (
-                        <tr key={bid.id}>
-                          <td>{bid.title}</td>
-                          <td>
-                            <span
-                              className={`badge ${
-                                bid.status === "won"
-                                  ? "badge-success"
-                                  : bid.status === "sent"
-                                  ? "badge-primary"
-                                  : "badge-warning"
-                              }`}
-                            >
-                              {bid.status}
-                            </span>
+                      {recentBids.length > 0 ? (
+                        recentBids.map((bid) => (
+                          <tr key={bid.id}>
+                            <td>{bid?.title || "Untitled Project"}</td>
+                            <td>
+                              <span
+                                className={`badge ${getStatusBadgeClass(
+                                  bid?.status
+                                )}`}
+                              >
+                                {bid?.status || "unknown"}
+                              </span>
+                            </td>
+                            <td>₹{Number(bid?.amount || 0).toLocaleString()}</td>
+                            <td>{bid?.dueDate || "-"}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            className="text-center text-muted py-4"
+                          >
+                            No bids found
                           </td>
-                          <td>₹{bid.amount.toLocaleString()}</td>
-                          <td>{bid.dueDate}</td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -118,7 +173,6 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                 >
                   Manage Clients →
                 </button>
-
               </div>
             </div>
           </div>
@@ -126,23 +180,52 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           <div className="col-lg-5 mb-4">
             <div className="card soft-card border-0 shadow-sm h-100">
               <div className="card-body">
-                <h5 className="mb-3 font-weight-bold">Pipeline Snapshot</h5>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0 font-weight-bold">Pipeline Snapshot</h5>
+                  <span className="badge badge-info px-3 py-2">
+                    {pipelineHealth.healthLabel}
+                  </span>
+                </div>
+
                 <ul className="list-group list-group-flush snapshot-list">
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Leads</span>
                     <strong>{leads.length}</strong>
                   </li>
+
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Sent</span>
                     <strong>{sentBids.length}</strong>
                   </li>
+
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Won</span>
                     <strong>{wonBids.length}</strong>
                   </li>
+
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Lost</span>
+                    <strong>{lostBids.length}</strong>
+                  </li>
+
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Total Clients</span>
                     <strong>{clients.length}</strong>
+                  </li>
+
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Health Score</span>
+                    <strong>{pipelineHealth?.score || 0}/100</strong>
+                  </li>
+
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Overdue Bids</span>
+                    <strong>{pipelineHealth?.overdueCount || 0}</strong>
+                  </li>
+
+                  <li className="list-group-item d-flex justify-content-between">
+                    <span>Due Soon</span>
+                    <strong>{pipelineHealth?.dueSoonCount || 0}</strong>
                   </li>
                 </ul>
               </div>
