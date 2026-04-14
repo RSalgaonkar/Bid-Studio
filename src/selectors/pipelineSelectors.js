@@ -3,68 +3,144 @@ import { createSelector } from "@reduxjs/toolkit";
 const selectBids = (state) => state.bids?.list || [];
 const selectClients = (state) => state.clients?.list || [];
 
-// Reusable grouped selector to avoid repeated filtering
-export const selectBidsByStatus = createSelector([selectBids], (bids) => {
+// Phase configuration
+export const PHASE_CONFIG = {
+  new: {
+    label: "New",
+    color: "info",
+    probability: 0.1,
+  },
+  proposal: {
+    label: "Proposal Sent",
+    color: "warning",
+    probability: 0.3,
+  },
+  in_review: {
+    label: "In Review",
+    color: "primary",
+    probability: 0.6,
+  },
+  won: {
+    label: "Won",
+    color: "success",
+    probability: 1,
+  },
+  executing: {
+    label: "Executing",
+    color: "info",
+    probability: 0.9,
+  },
+  delivered: {
+    label: "Delivered",
+    color: "success",
+    probability: 1,
+  },
+  closed: {
+    label: "Closed",
+    color: "secondary",
+    probability: 0,
+  },
+};
+
+// Backward compatibility for old status-based bids
+const mapStatusToPhase = (bid) => {
+  if (bid?.phase && PHASE_CONFIG[bid.phase]) {
+    return bid.phase;
+  }
+
+  switch (bid?.status) {
+    case "pending":
+      return "proposal";
+    case "approved":
+      return "won";
+    case "rejected":
+      return "closed";
+    default:
+      return "new";
+  }
+};
+
+export const selectBidsByPhase = createSelector([selectBids], (bids) => {
   const grouped = {
-    pending: [],
-    approved: [],
-    rejected: [],
+    new: [],
+    proposal: [],
+    in_review: [],
+    won: [],
+    executing: [],
+    delivered: [],
+    closed: [],
   };
 
   bids.forEach((bid) => {
-    const status = bid?.status || "pending";
+    const phase = mapStatusToPhase(bid);
 
-    if (grouped[status]) {
-      grouped[status].push(bid);
+    if (grouped[phase]) {
+      grouped[phase].push({
+        ...bid,
+        phase,
+      });
     }
   });
 
   return grouped;
 });
 
-export const selectBidStats = createSelector([selectBidsByStatus], (grouped) => {
-  const pending = grouped.pending;
-  const approved = grouped.approved;
-  const rejected = grouped.rejected;
-
-  const allBids = [...pending, ...approved, ...rejected];
+export const selectBidStats = createSelector([selectBidsByPhase], (grouped) => {
+  const allBids = Object.values(grouped).flat();
 
   const totalBids = allBids.length;
   const totalValue = allBids.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
-  const approvedValue = approved.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
-  const pendingValue = pending.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
-  const rejectedValue = rejected.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+  const phaseValues = Object.keys(grouped).reduce((acc, phase) => {
+    acc[phase] = grouped[phase].reduce(
+      (sum, bid) => sum + Number(bid.amount || 0),
+      0
+    );
+    return acc;
+  }, {});
 
   return {
     totalBids,
     totalValue,
-    pendingCount: pending.length,
-    approvedCount: approved.length,
-    rejectedCount: rejected.length,
-    approvedValue,
-    pendingValue,
-    rejectedValue,
+    newCount: grouped.new.length,
+    proposalCount: grouped.proposal.length,
+    inReviewCount: grouped.in_review.length,
+    wonCount: grouped.won.length,
+    executingCount: grouped.executing.length,
+    deliveredCount: grouped.delivered.length,
+    closedCount: grouped.closed.length,
+    newValue: phaseValues.new || 0,
+    proposalValue: phaseValues.proposal || 0,
+    inReviewValue: phaseValues.in_review || 0,
+    wonValue: phaseValues.won || 0,
+    executingValue: phaseValues.executing || 0,
+    deliveredValue: phaseValues.delivered || 0,
+    closedValue: phaseValues.closed || 0,
   };
 });
 
-export const selectPipelineHealth = createSelector([selectBidsByStatus], (grouped) => {
-  const pending = grouped.pending.length;
-  const approved = grouped.approved.length;
-  const rejected = grouped.rejected.length;
-  const total = pending + approved + rejected;
+export const selectPipelineHealth = createSelector([selectBidsByPhase], (grouped) => {
+  const total = Object.values(grouped).reduce((sum, bids) => sum + bids.length, 0);
 
-  const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
-  const rejectionRate = total > 0 ? Math.round((rejected / total) * 100) : 0;
-  const pendingRate = total > 0 ? Math.round((pending / total) * 100) : 0;
+  const earlyStage =
+    grouped.new.length + grouped.proposal.length + grouped.in_review.length;
 
-  let healthScore = 100 - rejectionRate;
+  const lateStage =
+    grouped.won.length + grouped.executing.length + grouped.delivered.length;
 
-  if (pendingRate > 50) {
+  const closed = grouped.closed.length;
+
+  const progressionRate = total > 0 ? Math.round((lateStage / total) * 100) : 0;
+  const closedRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+  const earlyStageRate = total > 0 ? Math.round((earlyStage / total) * 100) : 0;
+
+  let healthScore = 100 - closedRate;
+
+  if (earlyStageRate > 50) {
     healthScore -= 10;
   }
 
-  if (approvalRate < 30) {
+  if (progressionRate < 30) {
     healthScore -= 10;
   }
 
@@ -74,44 +150,62 @@ export const selectPipelineHealth = createSelector([selectBidsByStatus], (groupe
 
   return {
     total,
-    pending,
-    approved,
-    rejected,
-    approvalRate,
-    rejectionRate,
-    pendingRate,
+    earlyStage,
+    lateStage,
+    closed,
+    progressionRate,
+    closedRate,
+    earlyStageRate,
     healthScore,
   };
 });
 
-export const selectSmartAlerts = createSelector([selectBidsByStatus], (grouped) => {
+export const selectSmartAlerts = createSelector([selectBidsByPhase], (grouped) => {
   const alerts = [];
 
-  const pendingBids = grouped.pending;
-  const rejectedBids = grouped.rejected;
-  const approvedBids = grouped.approved;
+  const proposalBids = grouped.proposal;
+  const reviewBids = grouped.in_review;
+  const wonBids = grouped.won;
+  const executingBids = grouped.executing;
+  const closedBids = grouped.closed;
 
-  if (pendingBids.length >= 3) {
+  if (proposalBids.length >= 3) {
     alerts.push({
-      id: `pending-${pendingBids.length}`,
+      id: `proposal-${proposalBids.length}`,
       type: "warning",
-      message: `${pendingBids.length} bids are still pending. Review follow-ups.`,
+      message: `${proposalBids.length} proposals are waiting for client movement.`,
     });
   }
 
-  if (rejectedBids.length >= 2) {
+  if (reviewBids.length >= 3) {
     alerts.push({
-      id: `rejected-${rejectedBids.length}`,
+      id: `review-${reviewBids.length}`,
+      type: "info",
+      message: `${reviewBids.length} bids are in review. Follow up with clients soon.`,
+    });
+  }
+
+  if (closedBids.length >= 2) {
+    alerts.push({
+      id: `closed-${closedBids.length}`,
       type: "danger",
-      message: `${rejectedBids.length} bids were rejected. Review proposal quality or pricing.`,
+      message: `${closedBids.length} opportunities were closed/lost. Review pricing or pitch quality.`,
     });
   }
 
-  if (approvedBids.length >= 3) {
+  if (wonBids.length >= 2) {
     alerts.push({
-      id: `approved-${approvedBids.length}`,
+      id: `won-${wonBids.length}`,
       type: "success",
-      message: `${approvedBids.length} bids are approved. Strong conversion momentum.`,
+      message: `${wonBids.length} bids are won. Strong deal conversion momentum.`,
+    });
+  }
+
+  if (executingBids.length >= 2) {
+    alerts.push({
+      id: `executing-${executingBids.length}`,
+      type: "primary",
+      message: `${executingBids.length} projects are currently executing. Delivery workload is growing.`,
     });
   }
 
@@ -126,125 +220,121 @@ export const selectSmartAlerts = createSelector([selectBidsByStatus], (grouped) 
   return alerts;
 });
 
-export const selectWeightedForecast = createSelector([selectBids], (bids) => {
-  const probabilityMap = {
-    pending: 0.5,
-    approved: 1,
-    rejected: 0,
-  };
+export const selectWeightedForecast = createSelector([selectBidsByPhase], (grouped) => {
+  const allBids = Object.values(grouped).flat();
 
   let totalOpenPipeline = 0;
   let weightedForecast = 0;
   let committedRevenue = 0;
 
   const breakdown = {
-    pending: 0,
-    approved: 0,
-    rejected: 0,
+    new: 0,
+    proposal: 0,
+    in_review: 0,
+    won: 0,
+    executing: 0,
+    delivered: 0,
+    closed: 0,
   };
 
-  bids.forEach((bid) => {
-    const status = bid?.status || "pending";
+  allBids.forEach((bid) => {
+    const phase = bid?.phase || mapStatusToPhase(bid);
     const amount = Number(bid?.amount || 0);
-    const probability = probabilityMap[status] ?? 0;
+    const probability = PHASE_CONFIG[phase]?.probability ?? 0;
 
-    if (breakdown[status] !== undefined) {
-      breakdown[status] += amount;
-    }
+    breakdown[phase] = (breakdown[phase] || 0) + amount;
 
-    if (status === "pending") {
+    if (["new", "proposal", "in_review"].includes(phase)) {
       totalOpenPipeline += amount;
     }
 
     weightedForecast += amount * probability;
 
-    if (status === "approved") {
+    if (["won", "executing", "delivered"].includes(phase)) {
       committedRevenue += amount;
     }
   });
 
-  const pendingWeighted = bids
-    .filter((bid) => bid.status === "pending")
-    .reduce((sum, bid) => sum + Number(bid.amount || 0) * 0.5, 0);
+  const openWeighted = allBids
+    .filter((bid) => ["new", "proposal", "in_review"].includes(bid.phase))
+    .reduce((sum, bid) => {
+      const amount = Number(bid.amount || 0);
+      const probability = PHASE_CONFIG[bid.phase]?.probability ?? 0;
+      return sum + amount * probability;
+    }, 0);
 
   return {
-    probabilityMap,
+    probabilityMap: Object.keys(PHASE_CONFIG).reduce((acc, phase) => {
+      acc[phase] = PHASE_CONFIG[phase].probability;
+      return acc;
+    }, {}),
     totalOpenPipeline,
     weightedForecast: Math.round(weightedForecast),
     committedRevenue,
-    forecastGap: Math.round(totalOpenPipeline - pendingWeighted),
+    forecastGap: Math.round(totalOpenPipeline - openWeighted),
     breakdown,
   };
 });
 
-export const selectStageConversion = createSelector([selectBidsByStatus], (grouped) => {
-  const pendingCount = grouped.pending.length;
-  const approvedCount = grouped.approved.length;
-  const rejectedCount = grouped.rejected.length;
-  const total = pendingCount + approvedCount + rejectedCount;
+export const selectStageConversion = createSelector([selectBidsByPhase], (grouped) => {
+  const total = Object.values(grouped).reduce((sum, bids) => sum + bids.length, 0);
 
-  const approvalRate = total > 0 ? Math.round((approvedCount / total) * 100) : 0;
-  const rejectionRate = total > 0 ? Math.round((rejectedCount / total) * 100) : 0;
-  const pendingRate = total > 0 ? Math.round((pendingCount / total) * 100) : 0;
+  const newCount = grouped.new.length;
+  const proposalCount = grouped.proposal.length;
+  const inReviewCount = grouped.in_review.length;
+  const wonCount = grouped.won.length;
+  const executingCount = grouped.executing.length;
+  const deliveredCount = grouped.delivered.length;
+  const closedCount = grouped.closed.length;
+
+  const newRate = total > 0 ? Math.round((newCount / total) * 100) : 0;
+  const proposalRate = total > 0 ? Math.round((proposalCount / total) * 100) : 0;
+  const inReviewRate = total > 0 ? Math.round((inReviewCount / total) * 100) : 0;
+  const wonRate = total > 0 ? Math.round((wonCount / total) * 100) : 0;
+  const executingRate = total > 0 ? Math.round((executingCount / total) * 100) : 0;
+  const deliveredRate = total > 0 ? Math.round((deliveredCount / total) * 100) : 0;
+  const closedRate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
 
   return {
     total,
-    pendingCount,
-    approvedCount,
-    rejectedCount,
-    approvalRate,
-    rejectionRate,
-    pendingRate,
+    newCount,
+    proposalCount,
+    inReviewCount,
+    wonCount,
+    executingCount,
+    deliveredCount,
+    closedCount,
+    newRate,
+    proposalRate,
+    inReviewRate,
+    wonRate,
+    executingRate,
+    deliveredRate,
+    closedRate,
   };
 });
 
-export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
-  const stageCounts = {
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  };
+export const selectPipelineBottleneck = createSelector([selectBidsByPhase], (grouped) => {
+  const allBids = Object.values(grouped).flat();
+  const total = allBids.length;
 
-  const stageAmounts = {
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  };
+  const stageDistribution = Object.keys(PHASE_CONFIG).map((phase) => {
+    const phaseBids = grouped[phase] || [];
+    const amount = phaseBids.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
-  bids.forEach((bid) => {
-    const status = bid?.status || "pending";
-    const amount = Number(bid?.amount || 0);
-
-    if (["pending", "approved", "rejected"].includes(status)) {
-      stageCounts[status] += 1;
-      stageAmounts[status] += amount;
-    }
+    return {
+      stage: phase,
+      label: PHASE_CONFIG[phase].label,
+      count: phaseBids.length,
+      amount,
+      percentage: total > 0 ? Math.round((phaseBids.length / total) * 100) : 0,
+    };
   });
 
-  const total = bids.length;
+  const sortedStages = [...stageDistribution].sort(
+    (a, b) => b.percentage - a.percentage
+  );
 
-  const stageDistribution = [
-    {
-      stage: "pending",
-      count: stageCounts.pending,
-      amount: stageAmounts.pending,
-      percentage: total > 0 ? Math.round((stageCounts.pending / total) * 100) : 0,
-    },
-    {
-      stage: "approved",
-      count: stageCounts.approved,
-      amount: stageAmounts.approved,
-      percentage: total > 0 ? Math.round((stageCounts.approved / total) * 100) : 0,
-    },
-    {
-      stage: "rejected",
-      count: stageCounts.rejected,
-      amount: stageAmounts.rejected,
-      percentage: total > 0 ? Math.round((stageCounts.rejected / total) * 100) : 0,
-    },
-  ];
-
-  const sortedStages = [...stageDistribution].sort((a, b) => b.percentage - a.percentage);
   const topStage = sortedStages[0] || null;
 
   let severity = "healthy";
@@ -253,13 +343,13 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
   if (topStage) {
     if (topStage.percentage >= 50) {
       severity = "high";
-      insight = `${topStage.stage} stage holds ${topStage.percentage}% of bids. This is a major concentration risk.`;
+      insight = `${topStage.label} holds ${topStage.percentage}% of pipeline items. This is a major concentration risk.`;
     } else if (topStage.percentage >= 35) {
       severity = "medium";
-      insight = `${topStage.stage} stage holds ${topStage.percentage}% of bids. Watch this stage closely.`;
+      insight = `${topStage.label} holds ${topStage.percentage}% of pipeline items. Watch this phase closely.`;
     } else if (topStage.percentage >= 25) {
       severity = "low";
-      insight = `${topStage.stage} stage is the biggest share at ${topStage.percentage}%.`;
+      insight = `${topStage.label} is currently the largest phase at ${topStage.percentage}%.`;
     }
   }
 
@@ -272,19 +362,45 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
   };
 });
 
-export const selectScenarioForecast = createSelector([selectBids], (bids) => {
+export const selectScenarioForecast = createSelector([selectBidsByPhase], (grouped) => {
+  const allBids = Object.values(grouped).flat();
+
   const scenarios = {
-    best: { pending: 0.7, approved: 1, rejected: 0 },
-    base: { pending: 0.5, approved: 1, rejected: 0 },
-    worst: { pending: 0.3, approved: 1, rejected: 0 },
+    best: {
+      new: 0.2,
+      proposal: 0.5,
+      in_review: 0.8,
+      won: 1,
+      executing: 1,
+      delivered: 1,
+      closed: 0,
+    },
+    base: {
+      new: 0.1,
+      proposal: 0.3,
+      in_review: 0.6,
+      won: 1,
+      executing: 0.9,
+      delivered: 1,
+      closed: 0,
+    },
+    worst: {
+      new: 0.05,
+      proposal: 0.2,
+      in_review: 0.4,
+      won: 1,
+      executing: 0.8,
+      delivered: 1,
+      closed: 0,
+    },
   };
 
   const calculateScenario = (probabilityMap) => {
     return Math.round(
-      bids.reduce((total, bid) => {
-        const status = bid?.status || "pending";
+      allBids.reduce((total, bid) => {
+        const phase = bid?.phase || mapStatusToPhase(bid);
         const amount = Number(bid?.amount || 0);
-        const probability = probabilityMap[status] ?? 0;
+        const probability = probabilityMap[phase] ?? 0;
         return total + amount * probability;
       }, 0)
     );
@@ -298,24 +414,28 @@ export const selectScenarioForecast = createSelector([selectBids], (bids) => {
   };
 });
 
-export const selectDeadlineRisk = createSelector([selectBids], (bids) => {
+export const selectDeadlineRisk = createSelector([selectBidsByPhase], (grouped) => {
   const today = new Date();
+  const actionableBids = [
+    ...grouped.proposal,
+    ...grouped.in_review,
+    ...grouped.won,
+    ...grouped.executing,
+  ];
 
-  const enriched = bids.map((bid) => {
+  const enriched = actionableBids.map((bid) => {
     const deadlineDate = bid?.deadline ? new Date(bid.deadline) : today;
     const diffTime = deadlineDate.getTime() - today.getTime();
     const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     let urgency = "safe";
 
-    if (bid.status === "pending") {
-      if (daysLeft < 0) {
-        urgency = "overdue";
-      } else if (daysLeft <= 3) {
-        urgency = "critical";
-      } else if (daysLeft <= 7) {
-        urgency = "warning";
-      }
+    if (daysLeft < 0) {
+      urgency = "overdue";
+    } else if (daysLeft <= 3) {
+      urgency = "critical";
+    } else if (daysLeft <= 7) {
+      urgency = "warning";
     }
 
     return {
@@ -326,12 +446,8 @@ export const selectDeadlineRisk = createSelector([selectBids], (bids) => {
   });
 
   const riskyBids = enriched
-    .filter(
-      (bid) =>
-        bid.status === "pending" &&
-        (bid.urgency === "overdue" ||
-          bid.urgency === "critical" ||
-          bid.urgency === "warning")
+    .filter((bid) =>
+      ["overdue", "critical", "warning"].includes(bid.urgency)
     )
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
@@ -341,23 +457,35 @@ export const selectDeadlineRisk = createSelector([selectBids], (bids) => {
   };
 });
 
-// Optional combined selector for dashboard
 export const selectDashboardSummary = createSelector(
-  [selectBids, selectClients, selectBidsByStatus],
+  [selectBids, selectClients, selectBidsByPhase],
   (bids, clients, grouped) => {
-    const totalPipeline = bids.reduce((sum, bid) => sum + Number(bid?.amount || 0), 0);
+    const totalPipeline = bids.reduce(
+      (sum, bid) => sum + Number(bid?.amount || 0),
+      0
+    );
 
-    const activeClients = clients.filter((client) => client?.status === "active");
+    const activeClients = clients.filter(
+      (client) => client?.status === "active"
+    );
 
     const recentBids = [...bids]
+      .map((bid) => ({
+        ...bid,
+        phase: mapStatusToPhase(bid),
+      }))
       .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
       .slice(0, 5);
 
     return {
       totalPipeline,
-      pendingBids: grouped.pending,
-      approvedBids: grouped.approved,
-      rejectedBids: grouped.rejected,
+      newBids: grouped.new,
+      proposalBids: grouped.proposal,
+      inReviewBids: grouped.in_review,
+      wonBids: grouped.won,
+      executingBids: grouped.executing,
+      deliveredBids: grouped.delivered,
+      closedBids: grouped.closed,
       activeClients,
       recentBids,
       totalClients: clients.length,

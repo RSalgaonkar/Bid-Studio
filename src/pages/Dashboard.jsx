@@ -21,14 +21,19 @@ import {
   selectScenarioForecast,
   selectDeadlineRisk,
   selectDashboardSummary,
+  PHASE_CONFIG,
 } from "../selectors/pipelineSelectors";
 
 function Dashboard({ setActivePage, theme, toggleTheme }) {
   const {
     totalPipeline,
-    pendingBids,
-    approvedBids,
-    rejectedBids,
+    newBids,
+    proposalBids,
+    inReviewBids,
+    wonBids,
+    executingBids,
+    deliveredBids,
+    closedBids,
     activeClients,
     recentBids,
     totalClients,
@@ -42,17 +47,15 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
   const scenarioForecast = useSelector(selectScenarioForecast);
   const deadlineRisk = useSelector(selectDeadlineRisk);
 
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "approved":
-        return "badge-success";
-      case "pending":
-        return "badge-warning";
-      case "rejected":
-        return "badge-danger";
-      default:
-        return "badge-secondary";
-    }
+  // Updated to use phase instead of status
+  const getPhaseBadgeClass = (phase) => {
+    const config = PHASE_CONFIG[phase] || {};
+    return `badge-${config.color || "secondary"}`;
+  };
+
+  const getPhaseLabel = (phase) => {
+    const config = PHASE_CONFIG[phase] || {};
+    return config.label || phase || "unknown";
   };
 
   return (
@@ -68,6 +71,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
 
+        {/* Updated Stat Cards - now showing phase-based KPIs */}
         <div className="row mb-4">
           <div className="col-md-3 mb-3">
             <StatCard
@@ -80,9 +84,9 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
 
           <div className="col-md-3 mb-3">
             <StatCard
-              title="Approved Bids"
-              value={approvedBids.length}
-              subtitle="Closed successfully"
+              title="Won Projects"
+              value={wonBids.length}
+              subtitle="Contracts signed"
               color="success"
             />
           </div>
@@ -98,10 +102,10 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
 
           <div className="col-md-3 mb-3">
             <StatCard
-              title="Pending Proposals"
-              value={pendingBids.length}
-              subtitle="Awaiting response"
-              color="warning"
+              title="In Review"
+              value={inReviewBids.length}
+              subtitle="Awaiting decision"
+              color="primary"
             />
           </div>
         </div>
@@ -159,7 +163,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                       <tr>
                         <th>Project</th>
                         <th>Client</th>
-                        <th>Status</th>
+                        <th>Phase</th>
                         <th>Amount</th>
                         <th>Deadline</th>
                       </tr>
@@ -174,11 +178,11 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                             </td>
                             <td>
                               <span
-                                className={`badge ${getStatusBadgeClass(
-                                  bid?.status
+                                className={`badge ${getPhaseBadgeClass(
+                                  bid?.phase
                                 )}`}
                               >
-                                {bid?.status || "unknown"}
+                                {getPhaseLabel(bid?.phase)}
                               </span>
                             </td>
                             <td>
@@ -225,16 +229,16 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
 
                 <ul className="list-group list-group-flush snapshot-list">
                   <li className="list-group-item d-flex justify-content-between">
-                    <span>Pending</span>
-                    <strong>{pendingBids.length}</strong>
+                    <span>In Review</span>
+                    <strong>{inReviewBids.length}</strong>
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
-                    <span>Approved</span>
-                    <strong>{approvedBids.length}</strong>
+                    <span>Won</span>
+                    <strong>{wonBids.length}</strong>
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
-                    <span>Rejected</span>
-                    <strong>{rejectedBids.length}</strong>
+                    <span>Closed</span>
+                    <strong>{closedBids.length}</strong>
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Total Clients</span>
