@@ -11,6 +11,7 @@ import ConversionInsightsCard from "../components/ConversionInsightsCard";
 import BottleneckCard from "../components/BottleneckCard";
 import ScenarioForecastCard from "../components/ScenarioForecastCard";
 import DeadlineRiskCard from "../components/DeadlineRiskCard";
+import ScenarioSimulatorDrawer from "../components/ScenarioSimulatorDrawer";
 
 import {
   selectPipelineHealth,
@@ -52,6 +53,7 @@ function Dashboard({ setActivePage, theme, toggleTheme, openCommandPalette }) {
   const [minPercentage, setMinPercentage] = useState(0);
   const [selectedPhaseFilter, setSelectedPhaseFilter] = useState(null);
   const [selectedStage, setSelectedStage] = useState(null);
+  const [isScenarioDrawerOpen, setIsScenarioDrawerOpen] = useState(false);
 
   const phaseBidMap = useMemo(
     () => ({
@@ -338,11 +340,27 @@ function Dashboard({ setActivePage, theme, toggleTheme, openCommandPalette }) {
                     </p>
                   </div>
 
-                  {selectedPhaseFilter ? (
-                    <span className={`badge px-3 py-2 ${getPhaseBadgeClass(selectedPhaseFilter)}`}>
-                      {getPhaseLabel(selectedPhaseFilter)}
-                    </span>
-                  ) : null}
+                  <div className="d-flex align-items-center gap-2 flex-wrap">
+                    {selectedPhaseFilter ? (
+                      <span className={`badge px-3 py-2 ${getPhaseBadgeClass(selectedPhaseFilter)}`}>
+                        {getPhaseLabel(selectedPhaseFilter)}
+                      </span>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => setIsScenarioDrawerOpen(true)}
+                      disabled={!selectedPhaseFilter}
+                      title={
+                        selectedPhaseFilter
+                          ? "Open scenario simulator"
+                          : "Select a phase first from bottleneck visualization"
+                      }
+                    >
+                      Open Simulator
+                    </button>
+                  </div>
                 </div>
 
                 {selectedPhaseScenarioForecast ? (
@@ -414,6 +432,8 @@ function Dashboard({ setActivePage, theme, toggleTheme, openCommandPalette }) {
                     selectedStage={selectedStage}
                     bottleneckData={pipelineBottleneck}
                   />
+
+                  
                 )}
               </div>
             </div>
@@ -760,6 +780,14 @@ function Dashboard({ setActivePage, theme, toggleTheme, openCommandPalette }) {
           </div>
         </div>
       </div>
+      <ScenarioSimulatorDrawer
+        isOpen={isScenarioDrawerOpen}
+        onClose={() => setIsScenarioDrawerOpen(false)}
+        baseData={selectedPhaseScenarioForecast}
+        selectedPhase={selectedPhaseFilter}
+        selectedPhaseBids={selectedPhaseBids}
+        getPhaseLabel={getPhaseLabel}
+      />
     </div>
   );
 }
