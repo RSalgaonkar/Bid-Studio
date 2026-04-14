@@ -1,0 +1,76 @@
+@media (max-width: 1199px) {
+  .details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .form-card {
+    position: static;
+  }
+}
+
+@media (max-width: 767px) {
+  .main-content {
+    padding: 1rem !important;
+  }
+
+  .page-header {
+    gap: 12px;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modern-table {
+    min-width: 760px;
+  }
+
+  .filter-card .card-body,
+  .details-card .card-body,
+  .form-card .card-body,
+  .soft-card .card-body,
+  .analytics-card .card-body {
+    padding: 1rem;
+  }
+
+  .toast-wrapper {
+    top: auto;
+    right: 12px;
+    bottom: 16px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
+
+  .theme-toggle-btn,
+  .page-header .btn,
+  .page-header .theme-toggle-btn {
+    width: 100%;
+  }
+
+  .page-header > div:last-child {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .page-header > div:last-child .btn {
+    margin-top: 0.5rem;
+    margin-left: 0 !important;
+  }
+
+  .analytics-card .card-body {
+    padding: 1rem;
+  }
+}

@@ -1,4 +1,5 @@
 const STORAGE_KEY = "bid-studio-state";
+const THEME_KEY = "bid-studio-theme";
 
 export const loadAppState = () => {
   try {
@@ -33,5 +34,22 @@ export const clearAppState = () => {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error("Failed to clear localStorage:", error);
+  }
+};
+
+export const loadThemePreference = () => {
+  try {
+    return localStorage.getItem(THEME_KEY) || "light";
+  } catch (error) {
+    console.error("Failed to load theme:", error);
+    return "light";
+  }
+};
+
+export const saveThemePreference = (theme) => {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (error) {
+    console.error("Failed to save theme:", error);
   }
 };

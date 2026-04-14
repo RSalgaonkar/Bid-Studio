@@ -18,8 +18,10 @@ import {
   selectSelectedBid,
 } from "../features/bids/bidsSelectors";
 import AppToast from "../components/AppToast";
+import ConfirmModal from "../components/ConfirmModal";
+import ThemeToggle from "../components/ThemeToggle";
 
-function BidsPage({ setActivePage }) {
+function BidsPage({ setActivePage, theme, toggleTheme }) {
   const dispatch = useDispatch();
   const clients = useSelector((state) => state.clients.list);
   const bids = useSelector(selectFilteredBids);
@@ -61,6 +63,12 @@ function BidsPage({ setActivePage }) {
       show: false,
     }));
   };
+
+  const [confirmState, setConfirmState] = useState({
+    show: false,
+    bidId: null,
+    bidTitle: "",
+  });
 
   const getClientName = (clientId) => {
     const client = clients.find((item) => item.id === Number(clientId));
@@ -173,6 +181,37 @@ function BidsPage({ setActivePage }) {
     showToast("Bid Deleted", `${title} was removed successfully.`, "danger");
   };
 
+  const handleDeleteClick = (id, title) => {
+    setConfirmState({
+      show: true,
+      bidId: id,
+      bidTitle: title,
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    dispatch(deleteBid(confirmState.bidId));
+    showToast(
+      "Bid Deleted",
+      `${confirmState.bidTitle} was removed successfully.`,
+      "danger"
+    );
+
+    setConfirmState({
+      show: false,
+      bidId: null,
+      bidTitle: "",
+    });
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmState({
+      show: false,
+      bidId: null,
+      bidTitle: "",
+    });
+  };
+
   const handleSelectBid = (id) => {
     dispatch(setSelectedBidId(id));
   };
@@ -219,6 +258,7 @@ function BidsPage({ setActivePage }) {
           subtitle="Create proposals, search faster, and inspect details in one workflow."
           buttonText="Back to Dashboard"
           onButtonClick={() => setActivePage("dashboard")}
+          extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
 
         <BidFilters
@@ -419,7 +459,7 @@ function BidsPage({ setActivePage }) {
                                   </button>
                                   <button
                                     className="btn btn-sm btn-danger"
-                                    onClick={() => handleDeleteBid(bid.id, bid.title)}
+                                    onClick={() => handleDeleteClick(bid.id, bid.title)}
                                   >
                                     Delete
                                   </button>
@@ -463,6 +503,16 @@ function BidsPage({ setActivePage }) {
         message={toast.message}
         variant={toast.variant}
         onClose={closeToast}
+      />
+      <ConfirmModal
+        show={confirmState.show}
+        title="Delete Bid"
+        message={`Are you sure you want to delete "${confirmState.bidTitle}"?`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
       />
     </div>
     

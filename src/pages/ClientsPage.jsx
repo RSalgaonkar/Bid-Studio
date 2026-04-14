@@ -4,8 +4,10 @@ import { addClient, updateClient, deleteClient } from "../features/clients/clien
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import AppToast from "../components/AppToast";
+import ConfirmModal from "../components/ConfirmModal";
+import ThemeToggle from "../components/ThemeToggle";
 
-function ClientsPage({ setActivePage }) {
+function ClientsPage({ setActivePage, theme, toggleTheme }) {
   const dispatch = useDispatch();
   const clients = useSelector((state) => state.clients.list);
 
@@ -14,6 +16,12 @@ function ClientsPage({ setActivePage }) {
     name: "",
     company: "",
     status: "active",
+  });
+
+  const [confirmState, setConfirmState] = useState({
+    show: false,
+    clientId: null,
+    clientName: "",
   });
 
   const [isEdit, setIsEdit] = useState(false);
@@ -94,6 +102,37 @@ function ClientsPage({ setActivePage }) {
     showToast("Client Deleted", `${name} was removed successfully.`, "danger");
   };
 
+  const handleDeleteClick = (id, name) => {
+    setConfirmState({
+      show: true,
+      clientId: id,
+      clientName: name,
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    dispatch(deleteClient(confirmState.clientId));
+    showToast(
+      "Client Deleted",
+      `${confirmState.clientName} was removed successfully.`,
+      "danger"
+    );
+
+    setConfirmState({
+      show: false,
+      clientId: null,
+      clientName: "",
+    });
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmState({
+      show: false,
+      clientId: null,
+      clientName: "",
+    });
+  };
+
   return (
     <div className="app-layout">
       <Sidebar activePage="clients" setActivePage={setActivePage} />
@@ -104,6 +143,7 @@ function ClientsPage({ setActivePage }) {
           subtitle="Manage your client list and relationship status."
           buttonText="Back to Dashboard"
           onButtonClick={() => setActivePage("dashboard")}
+          extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
 
         <div className="row">
@@ -221,7 +261,7 @@ function ClientsPage({ setActivePage }) {
                             </button>
                             <button
                               className="btn btn-sm btn-danger"
-                              onClick={() => handleDelete(client.id, client.name)}
+                              onClick={() => handleDeleteClick(client.id, client.name)}
                             >
                               Delete
                             </button>
@@ -244,6 +284,17 @@ function ClientsPage({ setActivePage }) {
           onClose={closeToast}
         />
       </div>
+
+      <ConfirmModal
+        show={confirmState.show}
+        title="Delete Client"
+        message={`Are you sure you want to delete ${confirmState.clientName}?`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 }

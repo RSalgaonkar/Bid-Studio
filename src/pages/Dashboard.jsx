@@ -3,8 +3,9 @@ import { useSelector } from "react-redux";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import StatCard from "../components/StatCard";
+import ThemeToggle from "../components/ThemeToggle";
 
-function Dashboard({ setActivePage }) {
+function Dashboard({ setActivePage, theme, toggleTheme }) {
   const clients = useSelector((state) => state.clients.list);
   const bids = useSelector((state) => state.bids.list);
 
@@ -24,6 +25,7 @@ function Dashboard({ setActivePage }) {
           subtitle="Track bids, clients, and proposal pipeline."
           buttonText="+ New Bid"
           onButtonClick={() => setActivePage("bids")}
+          extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
 
         <div className="row mb-4">

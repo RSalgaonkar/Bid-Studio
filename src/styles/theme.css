@@ -1,0 +1,60 @@
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --text: #2f3542;
+  --text-muted: #6c757d;
+  --border: #dfe6ee;
+  --border-soft: #eef1f6;
+  --primary: #007bff;
+  --primary-shadow: rgba(0, 123, 255, 0.25);
+  --focus-ring: rgba(0, 123, 255, 0.15);
+  --sidebar-start: #1f2a37;
+  --sidebar-end: #111827;
+  --sidebar-text: rgba(255, 255, 255, 0.82);
+  --sidebar-text-muted: rgba(255, 255, 255, 0.65);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(15, 23, 42, 0.08);
+  --shadow-strong: rgba(15, 23, 42, 0.12);
+  --selected-row: #eef6ff;
+  --notes-bg: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+  --notes-border: #d9e9ff;
+  --overlay: rgba(15, 23, 42, 0.45);
+}
+
+body[data-theme="dark"] {
+  --bg: #111827;
+  --surface: #1f2937;
+  --surface-soft: #273244;
+  --text: #f3f4f6;
+  --text-muted: #cbd5e1;
+  --border: #334155;
+  --border-soft: #3b4759;
+  --primary: #4dabf7;
+  --primary-shadow: rgba(77, 171, 247, 0.25);
+  --focus-ring: rgba(77, 171, 247, 0.2);
+  --sidebar-start: #0f172a;
+  --sidebar-end: #020617;
+  --sidebar-text: rgba(255, 255, 255, 0.85);
+  --sidebar-text-muted: rgba(255, 255, 255, 0.65);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.35);
+  --shadow-strong: rgba(0, 0, 0, 0.45);
+  --selected-row: rgba(77, 171, 247, 0.12);
+  --notes-bg: linear-gradient(135deg, #1e293b 0%, #243244 100%);
+  --notes-border: #334155;
+  --overlay: rgba(0, 0, 0, 0.55);
+}
+
+body {
+  background: var(--bg);
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: var(--text);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.text-muted,
+.toast-body-custom,
+.detail-label {
+  color: var(--text-muted) !important;
+}
