@@ -1,91 +1,72 @@
 import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { addClient, updateClient, deleteClient } from "../features/clients/clientsSlice";
 import Sidebar from "../components/Sidebar";
-import {
-  addClient,
-  updateClient,
-  deleteClient,
-} from "../features/clients/clientsSlice";
+import Header from "../components/Header";
+import AppToast from "../components/AppToast";
 
 function ClientsPage({ setActivePage }) {
-  const clients = useSelector((state) => state.clients.list);
   const dispatch = useDispatch();
+  const clients = useSelector((state) => state.clients.list);
 
   const [form, setForm] = useState({
     id: null,
     name: "",
-    contact: "",
-    email: "",
+    company: "",
     status: "active",
   });
 
-  const [errors, setErrors] = useState({});
   const [isEdit, setIsEdit] = useState(false);
+  const [toast, setToast] = useState({
+    show: false,
+    title: "",
+    message: "",
+    variant: "primary",
+  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const showToast = (title, message, variant = "primary") => {
+    setToast({
+      show: true,
+      title,
+      message,
+      variant,
+    });
+  };
 
-    setForm((prev) => ({
+  const closeToast = () => {
+    setToast((prev) => ({
       ...prev,
-      [name]: value,
-    }));
-
-    setErrors((prev) => ({
-      ...prev,
-      [name]: "",
+      show: false,
     }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!form.name.trim()) {
-      newErrors.name = "Client company name is required";
-    }
-
-    if (!form.contact.trim()) {
-      newErrors.contact = "Contact person is required";
-    }
-
-    if (!form.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      newErrors.email = "Enter a valid email";
-    }
-
-    const emailExists = clients.some(
-      (client) =>
-        client.email.toLowerCase() === form.email.toLowerCase() &&
-        client.id !== form.id
-    );
-
-    if (emailExists) {
-      newErrors.email = "Email already exists";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const resetForm = () => {
     setForm({
       id: null,
       name: "",
-      contact: "",
-      email: "",
+      company: "",
       status: "active",
     });
-    setErrors({});
     setIsEdit(false);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!form.name || !form.company) {
+      return;
+    }
 
     if (isEdit) {
       dispatch(updateClient(form));
+      showToast("Client Updated", `${form.name} was updated successfully.`, "warning");
     } else {
       dispatch(
         addClient({
@@ -93,6 +74,7 @@ function ClientsPage({ setActivePage }) {
           id: Date.now(),
         })
       );
+      showToast("Client Added", `${form.name} was added successfully.`, "success");
     }
 
     resetForm();
@@ -100,12 +82,16 @@ function ClientsPage({ setActivePage }) {
 
   const handleEdit = (client) => {
     setForm(client);
-    setErrors({});
     setIsEdit(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id, name) => {
+    const confirmed = window.confirm(`Delete ${name}?`);
+
+    if (!confirmed) return;
+
     dispatch(deleteClient(id));
+    showToast("Client Deleted", `${name} was removed successfully.`, "danger");
   };
 
   return (
@@ -113,71 +99,44 @@ function ClientsPage({ setActivePage }) {
       <Sidebar activePage="clients" setActivePage={setActivePage} />
 
       <div className="main-content p-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h2 className="mb-1">Clients</h2>
-            <p className="text-muted mb-0">
-              Manage your client list before creating bids.
-            </p>
-          </div>
-
-          <button
-            className="btn btn-outline-secondary"
-            onClick={() => setActivePage("dashboard")}
-          >
-            Back to Dashboard
-          </button>
-        </div>
+        <Header
+          title="Clients"
+          subtitle="Manage your client list and relationship status."
+          buttonText="Back to Dashboard"
+          onButtonClick={() => setActivePage("dashboard")}
+        />
 
         <div className="row">
           <div className="col-lg-4 mb-4">
-            <div className="card shadow-sm border-0">
+            <div className="card form-card border-0 shadow-sm">
               <div className="card-body">
-                <h5 className="mb-3">
-                  {isEdit ? "Edit Client" : "Add New Client"}
+                <h5 className="mb-3 font-weight-bold">
+                  {isEdit ? "Edit Client" : "Add Client"}
                 </h5>
 
-                <form onSubmit={handleSubmit} noValidate>
+                <form onSubmit={handleSubmit}>
                   <div className="form-group">
-                    <label>Company Name</label>
+                    <label>Name</label>
                     <input
                       type="text"
                       name="name"
-                      className={`form-control ${errors.name ? "is-invalid" : ""}`}
+                      className="form-control"
                       value={form.name}
                       onChange={handleChange}
+                      placeholder="Enter client name"
                     />
-                    {errors.name && (
-                      <div className="invalid-feedback">{errors.name}</div>
-                    )}
                   </div>
 
                   <div className="form-group">
-                    <label>Contact Person</label>
+                    <label>Company</label>
                     <input
                       type="text"
-                      name="contact"
-                      className={`form-control ${errors.contact ? "is-invalid" : ""}`}
-                      value={form.contact}
+                      name="company"
+                      className="form-control"
+                      value={form.company}
                       onChange={handleChange}
+                      placeholder="Enter company name"
                     />
-                    {errors.contact && (
-                      <div className="invalid-feedback">{errors.contact}</div>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                      value={form.email}
-                      onChange={handleChange}
-                    />
-                    {errors.email && (
-                      <div className="invalid-feedback">{errors.email}</div>
-                    )}
                   </div>
 
                   <div className="form-group">
@@ -190,20 +149,21 @@ function ClientsPage({ setActivePage }) {
                     >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
+                      <option value="lead">Lead</option>
                     </select>
                   </div>
 
-                  <button type="submit" className="btn btn-primary mr-2">
-                    {isEdit ? "Update Client" : "Add Client"}
+                  <button type="submit" className="btn btn-primary btn-block">
+                    {isEdit ? "Update Client" : "Save Client"}
                   </button>
 
                   {isEdit && (
                     <button
                       type="button"
-                      className="btn btn-light border"
+                      className="btn btn-light border btn-block mt-2"
                       onClick={resetForm}
                     >
-                      Cancel
+                      Cancel Edit
                     </button>
                   )}
                 </form>
@@ -212,67 +172,62 @@ function ClientsPage({ setActivePage }) {
           </div>
 
           <div className="col-lg-8 mb-4">
-            <div className="card shadow-sm border-0">
+            <div className="card soft-card border-0 shadow-sm">
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="mb-0">Client Directory</h5>
-                  <span className="badge badge-dark p-2">
-                    {clients.length} Clients
-                  </span>
+                  <div>
+                    <h5 className="mb-1 font-weight-bold">Client Directory</h5>
+                    <p className="text-muted small mb-0">
+                      All your saved clients in one place
+                    </p>
+                  </div>
+                  <span className="badge badge-dark p-2">{clients.length} Clients</span>
                 </div>
 
                 <div className="table-responsive">
-                  <table className="table table-hover align-middle">
+                  <table className="table modern-table">
                     <thead>
                       <tr>
+                        <th>Name</th>
                         <th>Company</th>
-                        <th>Contact</th>
-                        <th>Email</th>
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {clients.length > 0 ? (
-                        clients.map((client) => (
-                          <tr key={client.id}>
-                            <td>{client.name}</td>
-                            <td>{client.contact}</td>
-                            <td>{client.email}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  client.status === "active"
-                                    ? "badge-success"
-                                    : "badge-secondary"
-                                }`}
-                              >
-                                {client.status}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-warning mr-2"
-                                onClick={() => handleEdit(client)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleDelete(client.id)}
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="text-center text-muted py-4">
-                            No clients added yet.
+                      {clients.map((client) => (
+                        <tr key={client.id}>
+                          <td>{client.name}</td>
+                          <td>{client.company}</td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                client.status === "active"
+                                  ? "badge-success"
+                                  : client.status === "inactive"
+                                  ? "badge-secondary"
+                                  : "badge-warning"
+                              }`}
+                            >
+                              {client.status}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-warning mr-2"
+                              onClick={() => handleEdit(client)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleDelete(client.id, client.name)}
+                            >
+                              Delete
+                            </button>
                           </td>
                         </tr>
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -280,6 +235,14 @@ function ClientsPage({ setActivePage }) {
             </div>
           </div>
         </div>
+
+        <AppToast
+          show={toast.show}
+          title={toast.title}
+          message={toast.message}
+          variant={toast.variant}
+          onClose={closeToast}
+        />
       </div>
     </div>
   );

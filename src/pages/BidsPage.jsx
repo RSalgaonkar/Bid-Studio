@@ -17,6 +17,7 @@ import {
   selectFilteredBids,
   selectSelectedBid,
 } from "../features/bids/bidsSelectors";
+import AppToast from "../components/AppToast";
 
 function BidsPage({ setActivePage }) {
   const dispatch = useDispatch();
@@ -37,6 +38,29 @@ function BidsPage({ setActivePage }) {
 
   const [errors, setErrors] = useState({});
   const [isEdit, setIsEdit] = useState(false);
+
+  const [toast, setToast] = useState({
+    show: false,
+    title: "",
+    message: "",
+    variant: "primary",
+  });
+
+  const showToast = (title, message, variant = "primary") => {
+    setToast({
+      show: true,
+      title,
+      message,
+      variant,
+    });
+  };
+
+  const closeToast = () => {
+    setToast((prev) => ({
+      ...prev,
+      show: false,
+    }));
+  };
 
   const getClientName = (clientId) => {
     const client = clients.find((item) => item.id === Number(clientId));
@@ -120,8 +144,10 @@ function BidsPage({ setActivePage }) {
     if (isEdit) {
       dispatch(updateBid(payload));
       dispatch(setSelectedBidId(payload.id));
+      showToast("Bid Updated", `${payload.title} was updated successfully.`, "warning");
     } else {
       dispatch(addBid(payload));
+      showToast("Bid Added", `${payload.title} was created successfully.`, "success");
     }
 
     resetForm();
@@ -138,8 +164,13 @@ function BidsPage({ setActivePage }) {
     dispatch(setSelectedBidId(bid.id));
   };
 
-  const handleDeleteBid = (id) => {
+  const handleDeleteBid = (id, title) => {
+    const confirmed = window.confirm(`Delete bid "${title}"?`);
+
+    if (!confirmed) return;
+
     dispatch(deleteBid(id));
+    showToast("Bid Deleted", `${title} was removed successfully.`, "danger");
   };
 
   const handleSelectBid = (id) => {
@@ -388,7 +419,7 @@ function BidsPage({ setActivePage }) {
                                   </button>
                                   <button
                                     className="btn btn-sm btn-danger"
-                                    onClick={() => handleDeleteBid(bid.id)}
+                                    onClick={() => handleDeleteBid(bid.id, bid.title)}
                                   >
                                     Delete
                                   </button>
@@ -426,7 +457,15 @@ function BidsPage({ setActivePage }) {
           </div>
         </div>
       </div>
+      <AppToast
+        show={toast.show}
+        title={toast.title}
+        message={toast.message}
+        variant={toast.variant}
+        onClose={closeToast}
+      />
     </div>
+    
   );
 }
 
