@@ -1,46 +1,58 @@
 import { createSelector } from "@reduxjs/toolkit";
 
 const selectBids = (state) => state.bids?.list || [];
+const selectClients = (state) => state.clients?.list || [];
 
-export const selectBidStats = createSelector([selectBids], (bids) => {
-  const totalBids = bids.length;
+// Reusable grouped selector to avoid repeated filtering
+export const selectBidsByStatus = createSelector([selectBids], (bids) => {
+  const grouped = {
+    pending: [],
+    approved: [],
+    rejected: [],
+  };
 
-  const totalValue = bids.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+  bids.forEach((bid) => {
+    const status = bid?.status || "pending";
 
-  const pendingCount = bids.filter((bid) => bid.status === "pending").length;
-  const approvedCount = bids.filter((bid) => bid.status === "approved").length;
-  const rejectedCount = bids.filter((bid) => bid.status === "rejected").length;
+    if (grouped[status]) {
+      grouped[status].push(bid);
+    }
+  });
 
-  const approvedValue = bids
-    .filter((bid) => bid.status === "approved")
-    .reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+  return grouped;
+});
 
-  const pendingValue = bids
-    .filter((bid) => bid.status === "pending")
-    .reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+export const selectBidStats = createSelector([selectBidsByStatus], (grouped) => {
+  const pending = grouped.pending;
+  const approved = grouped.approved;
+  const rejected = grouped.rejected;
 
-  const rejectedValue = bids
-    .filter((bid) => bid.status === "rejected")
-    .reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+  const allBids = [...pending, ...approved, ...rejected];
+
+  const totalBids = allBids.length;
+  const totalValue = allBids.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+
+  const approvedValue = approved.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+  const pendingValue = pending.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
+  const rejectedValue = rejected.reduce((sum, bid) => sum + Number(bid.amount || 0), 0);
 
   return {
     totalBids,
     totalValue,
-    pendingCount,
-    approvedCount,
-    rejectedCount,
+    pendingCount: pending.length,
+    approvedCount: approved.length,
+    rejectedCount: rejected.length,
     approvedValue,
     pendingValue,
     rejectedValue,
   };
 });
 
-export const selectPipelineHealth = createSelector([selectBids], (bids) => {
-  const total = bids.length;
-
-  const pending = bids.filter((bid) => bid.status === "pending").length;
-  const approved = bids.filter((bid) => bid.status === "approved").length;
-  const rejected = bids.filter((bid) => bid.status === "rejected").length;
+export const selectPipelineHealth = createSelector([selectBidsByStatus], (grouped) => {
+  const pending = grouped.pending.length;
+  const approved = grouped.approved.length;
+  const rejected = grouped.rejected.length;
+  const total = pending + approved + rejected;
 
   const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
   const rejectionRate = total > 0 ? Math.round((rejected / total) * 100) : 0;
@@ -72,12 +84,12 @@ export const selectPipelineHealth = createSelector([selectBids], (bids) => {
   };
 });
 
-export const selectSmartAlerts = createSelector([selectBids], (bids) => {
+export const selectSmartAlerts = createSelector([selectBidsByStatus], (grouped) => {
   const alerts = [];
 
-  const pendingBids = bids.filter((bid) => bid.status === "pending");
-  const rejectedBids = bids.filter((bid) => bid.status === "rejected");
-  const approvedBids = bids.filter((bid) => bid.status === "approved");
+  const pendingBids = grouped.pending;
+  const rejectedBids = grouped.rejected;
+  const approvedBids = grouped.approved;
 
   if (pendingBids.length >= 3) {
     alerts.push({
@@ -136,7 +148,9 @@ export const selectWeightedForecast = createSelector([selectBids], (bids) => {
     const amount = Number(bid?.amount || 0);
     const probability = probabilityMap[status] ?? 0;
 
-    breakdown[status] = (breakdown[status] || 0) + amount;
+    if (breakdown[status] !== undefined) {
+      breakdown[status] += amount;
+    }
 
     if (status === "pending") {
       totalOpenPipeline += amount;
@@ -149,7 +163,6 @@ export const selectWeightedForecast = createSelector([selectBids], (bids) => {
     }
   });
 
-  // FIXED: Use inline function instead of external reference
   const pendingWeighted = bids
     .filter((bid) => bid.status === "pending")
     .reduce((sum, bid) => sum + Number(bid.amount || 0) * 0.5, 0);
@@ -164,12 +177,11 @@ export const selectWeightedForecast = createSelector([selectBids], (bids) => {
   };
 });
 
-export const selectStageConversion = createSelector([selectBids], (bids) => {
-  const total = bids.length;
-
-  const pendingCount = bids.filter((bid) => bid.status === "pending").length;
-  const approvedCount = bids.filter((bid) => bid.status === "approved").length;
-  const rejectedCount = bids.filter((bid) => bid.status === "rejected").length;
+export const selectStageConversion = createSelector([selectBidsByStatus], (grouped) => {
+  const pendingCount = grouped.pending.length;
+  const approvedCount = grouped.approved.length;
+  const rejectedCount = grouped.rejected.length;
+  const total = pendingCount + approvedCount + rejectedCount;
 
   const approvalRate = total > 0 ? Math.round((approvedCount / total) * 100) : 0;
   const rejectionRate = total > 0 ? Math.round((rejectedCount / total) * 100) : 0;
@@ -203,7 +215,6 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
     const status = bid?.status || "pending";
     const amount = Number(bid?.amount || 0);
 
-    // FIXED: Only process valid statuses to prevent NaN
     if (["pending", "approved", "rejected"].includes(status)) {
       stageCounts[status] += 1;
       stageAmounts[status] += amount;
@@ -212,7 +223,6 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
 
   const total = bids.length;
 
-  // FIXED: Explicitly define only your 3 statuses - NO NaN%
   const stageDistribution = [
     {
       stage: "pending",
@@ -234,10 +244,7 @@ export const selectPipelineBottleneck = createSelector([selectBids], (bids) => {
     },
   ];
 
-  const sortedStages = [...stageDistribution].sort(
-    (a, b) => b.percentage - a.percentage
-  );
-
+  const sortedStages = [...stageDistribution].sort((a, b) => b.percentage - a.percentage);
   const topStage = sortedStages[0] || null;
 
   let severity = "healthy";
@@ -333,3 +340,27 @@ export const selectDeadlineRisk = createSelector([selectBids], (bids) => {
     riskyBids,
   };
 });
+
+// Optional combined selector for dashboard
+export const selectDashboardSummary = createSelector(
+  [selectBids, selectClients, selectBidsByStatus],
+  (bids, clients, grouped) => {
+    const totalPipeline = bids.reduce((sum, bid) => sum + Number(bid?.amount || 0), 0);
+
+    const activeClients = clients.filter((client) => client?.status === "active");
+
+    const recentBids = [...bids]
+      .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+      .slice(0, 5);
+
+    return {
+      totalPipeline,
+      pendingBids: grouped.pending,
+      approvedBids: grouped.approved,
+      rejectedBids: grouped.rejected,
+      activeClients,
+      recentBids,
+      totalClients: clients.length,
+    };
+  }
+);

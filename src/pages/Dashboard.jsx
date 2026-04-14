@@ -12,7 +12,6 @@ import BottleneckCard from "../components/BottleneckCard";
 import ScenarioForecastCard from "../components/ScenarioForecastCard";
 import DeadlineRiskCard from "../components/DeadlineRiskCard";
 
-// SINGLE import block - fixes ReferenceError
 import {
   selectPipelineHealth,
   selectSmartAlerts,
@@ -21,13 +20,20 @@ import {
   selectPipelineBottleneck,
   selectScenarioForecast,
   selectDeadlineRisk,
+  selectDashboardSummary,
 } from "../selectors/pipelineSelectors";
 
 function Dashboard({ setActivePage, theme, toggleTheme }) {
-  const clients = useSelector((state) => state.clients?.list || []);
-  const bids = useSelector((state) => state.bids?.list || []);
-  
-  // All selectors now properly imported - no more ReferenceError
+  const {
+    totalPipeline,
+    pendingBids,
+    approvedBids,
+    rejectedBids,
+    activeClients,
+    recentBids,
+    totalClients,
+  } = useSelector(selectDashboardSummary);
+
   const pipelineHealth = useSelector(selectPipelineHealth);
   const smartAlerts = useSelector(selectSmartAlerts);
   const weightedForecast = useSelector(selectWeightedForecast);
@@ -36,25 +42,6 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
   const scenarioForecast = useSelector(selectScenarioForecast);
   const deadlineRisk = useSelector(selectDeadlineRisk);
 
-  // FIXED: Use your actual statuses (pending/approved/rejected)
-  const totalPipeline = bids.reduce(
-    (sum, bid) => sum + Number(bid?.amount || 0),
-    0
-  );
-
-  const pendingBids = bids.filter((bid) => bid?.status === "pending");
-  const approvedBids = bids.filter((bid) => bid?.status === "approved");
-  const rejectedBids = bids.filter((bid) => bid?.status === "rejected");
-
-  const activeClients = clients.filter(
-    (client) => client?.status === "active"
-  );
-
-  const recentBids = [...bids]
-    .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
-    .slice(0, 5);
-
-  // FIXED: Match your actual statuses
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "approved":
@@ -81,7 +68,6 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
           extraActions={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
 
-        {/* FIXED: Use correct statuses and data */}
         <div className="row mb-4">
           <div className="col-md-3 mb-3">
             <StatCard
@@ -200,7 +186,6 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                                 ₹{Number(bid?.amount || 0).toLocaleString()}
                               </strong>
                             </td>
-                            {/* FIXED: Use deadline instead of dueDate */}
                             <td>{bid?.deadline || "-"}</td>
                           </tr>
                         ))
@@ -233,7 +218,6 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="mb-0 font-weight-bold">Pipeline Snapshot</h5>
-                  {/* FIXED: Use actual pipelineHealth data */}
                   <span className="badge badge-info px-3 py-2">
                     {pipelineHealth?.healthScore || 0}/100
                   </span>
@@ -254,7 +238,7 @@ function Dashboard({ setActivePage, theme, toggleTheme }) {
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Total Clients</span>
-                    <strong>{clients.length}</strong>
+                    <strong>{totalClients}</strong>
                   </li>
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Health Score</span>
