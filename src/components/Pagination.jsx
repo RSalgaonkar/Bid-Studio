@@ -6,9 +6,11 @@ function Pagination({
   itemsPerPage = 5,
   onPageChange,
 }) {
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
-  if (totalPages <= 1) return null;
+  if (totalItems === 0 || totalPages === 1) {
+    return null;
+  }
 
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
 
@@ -20,6 +22,7 @@ function Pagination({
 
       <div className="btn-group">
         <button
+          type="button"
           className="btn btn-outline-secondary btn-sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
@@ -30,6 +33,7 @@ function Pagination({
         {pages.map((page) => (
           <button
             key={page}
+            type="button"
             className={`btn btn-sm ${
               currentPage === page ? "btn-primary" : "btn-outline-secondary"
             }`}
@@ -40,6 +44,7 @@ function Pagination({
         ))}
 
         <button
+          type="button"
           className="btn btn-outline-secondary btn-sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
