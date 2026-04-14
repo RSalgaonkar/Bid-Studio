@@ -19,9 +19,14 @@ function Dashboard({ setActivePage }) {
       <Sidebar activePage="dashboard" setActivePage={setActivePage} />
 
       <div className="main-content p-4">
-        <Header />
+        <Header
+          title="Dashboard"
+          subtitle="Track bids, clients, and proposal pipeline."
+          buttonText="+ New Bid"
+          onButtonClick={() => setActivePage("bids")}
+        />
 
-        <div className="row g-3 mb-4">
+        <div className="row mb-4">
           <div className="col-md-3 mb-3">
             <StatCard
               title="Total Pipeline"
@@ -30,7 +35,6 @@ function Dashboard({ setActivePage }) {
               color="primary"
             />
           </div>
-
           <div className="col-md-3 mb-3">
             <StatCard
               title="Won Bids"
@@ -39,7 +43,6 @@ function Dashboard({ setActivePage }) {
               color="success"
             />
           </div>
-
           <div className="col-md-3 mb-3">
             <StatCard
               title="Active Clients"
@@ -48,7 +51,6 @@ function Dashboard({ setActivePage }) {
               color="warning"
             />
           </div>
-
           <div className="col-md-3 mb-3">
             <StatCard
               title="Pending Proposals"
@@ -61,12 +63,20 @@ function Dashboard({ setActivePage }) {
 
         <div className="row">
           <div className="col-lg-7 mb-4">
-            <div className="card shadow-sm border-0">
+            <div className="card soft-card border-0 shadow-sm">
               <div className="card-body">
-                <h5 className="mb-3">Recent Bids</h5>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0 font-weight-bold">Recent Bids</h5>
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setActivePage("bids")}
+                  >
+                    View All
+                  </button>
+                </div>
 
                 <div className="table-responsive">
-                  <table className="table align-middle">
+                  <table className="table align-middle modern-table">
                     <thead>
                       <tr>
                         <th>Project</th>
@@ -101,20 +111,21 @@ function Dashboard({ setActivePage }) {
                 </div>
 
                 <button
-                  className="btn btn-outline-primary btn-sm mt-2"
+                  className="btn btn-link px-0 mt-2"
                   onClick={() => setActivePage("clients")}
                 >
-                  Manage Clients
+                  Manage Clients →
                 </button>
+
               </div>
             </div>
           </div>
 
           <div className="col-lg-5 mb-4">
-            <div className="card shadow-sm border-0">
+            <div className="card soft-card border-0 shadow-sm h-100">
               <div className="card-body">
-                <h5 className="mb-3">Pipeline Snapshot</h5>
-                <ul className="list-group list-group-flush">
+                <h5 className="mb-3 font-weight-bold">Pipeline Snapshot</h5>
+                <ul className="list-group list-group-flush snapshot-list">
                   <li className="list-group-item d-flex justify-content-between">
                     <span>Leads</span>
                     <strong>{leads.length}</strong>
