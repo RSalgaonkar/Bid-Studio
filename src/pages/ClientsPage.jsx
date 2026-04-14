@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import SearchBar from "../components/SearchBar";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { useDispatch, useSelector } from "react-redux";
 import { addClient, updateClient, deleteClient } from "../features/clients/clientsSlice";
 import Sidebar from "../components/Sidebar";
@@ -10,7 +13,34 @@ import ThemeToggle from "../components/ThemeToggle";
 function ClientsPage({ setActivePage, theme, toggleTheme }) {
   const dispatch = useDispatch();
   const clients = useSelector((state) => state.clients.list);
+  const [searchTerm, setSearchTerm] = useState("");
 
+  // Filter clients based on search term
+  const filteredClients = useMemo(() => {
+    return clients.filter((client) => {
+      const search = searchTerm.toLowerCase();
+      return (
+        client.name.toLowerCase().includes(search) ||
+        client.company.toLowerCase().includes(search) ||
+        (client.email || "").toLowerCase().includes(search)
+      );
+    });
+  }, [clients, searchTerm]);
+
+  // Pagination for filtered clients
+  const {
+    currentPage,
+    paginatedData,
+    goToPage,
+    resetPage,
+  } = usePagination(filteredClients, 5);
+
+  // Reset page when search changes
+  useEffect(() => {
+    resetPage();
+  }, [searchTerm, resetPage]);
+
+  // Form state
   const [form, setForm] = useState({
     id: null,
     name: "",
@@ -69,6 +99,7 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
     e.preventDefault();
 
     if (!form.name || !form.company) {
+      showToast("Validation Error", "Please fill name and company fields.", "warning");
       return;
     }
 
@@ -91,23 +122,6 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
   const handleEdit = (client) => {
     setForm(client);
     setIsEdit(true);
-  };
-
-  const handleDelete = (id, name) => {
-    const confirmed = window.confirm(`Delete ${name}?`);
-
-    if (!confirmed) return;
-
-    dispatch(deleteClient(id));
-    showToast("Client Deleted", `${name} was removed successfully.`, "danger");
-  };
-
-  const handleDeleteClick = (id, name) => {
-    setConfirmState({
-      show: true,
-      clientId: id,
-      clientName: name,
-    });
   };
 
   const handleConfirmDelete = () => {
@@ -133,6 +147,14 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
     });
   };
 
+  const handleDeleteClick = (id, name) => {
+    setConfirmState({
+      show: true,
+      clientId: id,
+      clientName: name,
+    });
+  };
+
   return (
     <div className="app-layout">
       <Sidebar activePage="clients" setActivePage={setActivePage} />
@@ -147,6 +169,7 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
         />
 
         <div className="row">
+          {/* Form Column */}
           <div className="col-lg-4 mb-4">
             <div className="card form-card border-0 shadow-sm">
               <div className="card-body">
@@ -211,19 +234,32 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
             </div>
           </div>
 
+          {/* Table Column */}
           <div className="col-lg-8 mb-4">
             <div className="card soft-card border-0 shadow-sm">
               <div className="card-body">
+                {/* Header with count */}
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <div>
                     <h5 className="mb-1 font-weight-bold">Client Directory</h5>
                     <p className="text-muted small mb-0">
-                      All your saved clients in one place
+                      {filteredClients.length} of {clients.length} clients
+                      {searchTerm && ` • "${searchTerm}"`}
                     </p>
                   </div>
-                  <span className="badge badge-dark p-2">{clients.length} Clients</span>
                 </div>
 
+                {/* Search Bar */}
+                <div className="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                  <h6 className="mb-2 mb-md-0">Clients List</h6>
+                  <SearchBar
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Search by name, company, or email..."
+                  />
+                </div>
+
+                {/* Table */}
                 <div className="table-responsive">
                   <table className="table modern-table">
                     <thead>
@@ -235,47 +271,69 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {clients.map((client) => (
-                        <tr key={client.id}>
-                          <td>{client.name}</td>
-                          <td>{client.company}</td>
-                          <td>
-                            <span
-                              className={`badge ${
-                                client.status === "active"
-                                  ? "badge-success"
-                                  : client.status === "inactive"
-                                  ? "badge-secondary"
-                                  : "badge-warning"
-                              }`}
-                            >
-                              {client.status}
-                            </span>
-                          </td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-warning mr-2"
-                              onClick={() => handleEdit(client)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="btn btn-sm btn-danger"
-                              onClick={() => handleDeleteClick(client.id, client.name)}
-                            >
-                              Delete
-                            </button>
+                      {filteredClients.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="text-center py-4">
+                            <div className="text-muted">
+                              {searchTerm 
+                                ? `No clients found for "${searchTerm}"`
+                                : "No clients added yet. Create your first client!"
+                              }
+                            </div>
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        paginatedData.map((client) => (
+                          <tr key={client.id} className="clickable-row">
+                            <td>{client.name}</td>
+                            <td>{client.company}</td>
+                            <td>
+                              <span
+                                className={`badge ${
+                                  client.status === "active"
+                                    ? "badge-success"
+                                    : client.status === "inactive"
+                                    ? "badge-secondary"
+                                    : "badge-warning"
+                                }`}
+                              >
+                                {client.status}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-warning mr-2"
+                                onClick={() => handleEdit(client)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleDeleteClick(client.id, client.name)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={filteredClients.length}
+                  itemsPerPage={5}
+                  onPageChange={goToPage}
+                />
               </div>
             </div>
           </div>
         </div>
 
+        {/* Toast */}
         <AppToast
           show={toast.show}
           title={toast.title}
@@ -283,18 +341,19 @@ function ClientsPage({ setActivePage, theme, toggleTheme }) {
           variant={toast.variant}
           onClose={closeToast}
         />
-      </div>
 
-      <ConfirmModal
-        show={confirmState.show}
-        title="Delete Client"
-        message={`Are you sure you want to delete ${confirmState.clientName}?`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        confirmVariant="danger"
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
-      />
+        {/* Confirm Modal */}
+        <ConfirmModal
+          show={confirmState.show}
+          title="Delete Client"
+          message={`Are you sure you want to delete ${confirmState.clientName}? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          confirmVariant="danger"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      </div>
     </div>
   );
 }
