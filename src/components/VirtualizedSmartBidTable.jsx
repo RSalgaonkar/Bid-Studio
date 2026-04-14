@@ -1,17 +1,28 @@
-import React from 'react';
+import React, { useMemo } from "react";
 
-const VirtualizedSmartBidTable = ({
-  data = [],
+function StatusBadge({ status }) {
+  const badgeClass =
+    status === "approved"
+      ? "badge-success"
+      : status === "rejected"
+      ? "badge-danger"
+      : "badge-warning";
+
+  return <span className={`badge ${badgeClass}`}>{status || "unknown"}</span>;
+}
+
+function VirtualizedSmartBidTable({
+  bids = [],
   onEdit,
   onDelete,
-  loading = false,
-  emptyMessage = "No bids found",
-  className = "table modern-table"
-}) => {
-  if (loading) {
+  emptyMessage = "No bids found.",
+}) {
+  const tableData = useMemo(() => bids || [], [bids]);
+
+  if (tableData.length === 0) {
     return (
       <div className="table-responsive">
-        <table className={className}>
+        <table className="table modern-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -23,16 +34,11 @@ const VirtualizedSmartBidTable = ({
             </tr>
           </thead>
           <tbody>
-            {[...Array(5)].map((_, i) => (
-              <tr key={`skeleton-${i}`}>
-                <td><div className="skeleton h-4 w-32 mb-2"></div></td>
-                <td><div className="skeleton h-4 w-24 mb-2"></div></td>
-                <td><div className="skeleton h-4 w-20 mb-2"></div></td>
-                <td><div className="skeleton h-4 w-20 mb-2"></div></td>
-                <td><div className="skeleton h-6 w-16"></div></td>
-                <td><div className="skeleton h-8 w-24"></div></td>
-              </tr>
-            ))}
+            <tr>
+              <td colSpan="6" className="text-center py-4">
+                {emptyMessage}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -40,10 +46,10 @@ const VirtualizedSmartBidTable = ({
   }
 
   return (
-    <div className="table-responsive" style={{ height: '400px', overflow: 'auto' }}>
-      <table className={className}>
+    <div className="table-responsive">
+      <table className="table modern-table">
         <thead>
-          <tr className="sticky top-0 bg-white z-10 shadow-sm" style={{ position: 'sticky', top: 0 }}>
+          <tr>
             <th>Title</th>
             <th>Client</th>
             <th>Amount</th>
@@ -52,62 +58,40 @@ const VirtualizedSmartBidTable = ({
             <th>Actions</th>
           </tr>
         </thead>
+
         <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan="6" className="text-center py-8">
-                <div className="text-muted">
-                  {emptyMessage}
-                </div>
+          {tableData.map((bid) => (
+            <tr key={bid?.id}>
+              <td>{bid?.title || "-"}</td>
+              <td>{bid?.client || "-"}</td>
+              <td>₹ {Number(bid?.amount || 0).toLocaleString()}</td>
+              <td>{bid?.deadline || "-"}</td>
+              <td>
+                <StatusBadge status={bid?.status} />
+              </td>
+              <td>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-warning mr-2"
+                  onClick={() => onEdit?.(bid)}
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  onClick={() => onDelete?.(bid?.id, bid?.title)}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
-          ) : (
-            data.map((bid, index) => (
-              <tr key={bid?.id || index} className="hover:bg-gray-50">
-                <td className="py-3">{bid?.title || "-"}</td>
-                <td className="py-3">{bid?.client || "-"}</td>
-                <td className="py-3 font-medium">
-                  ₹{Number(bid?.amount || 0).toLocaleString()}
-                </td>
-                <td className="py-3">{bid?.deadline || "-"}</td>
-                <td className="py-3">
-                  <span
-                    className={`badge px-2 py-1 text-xs font-medium rounded-full ${
-                      bid?.status === "approved"
-                        ? "badge-success bg-green-100 text-green-800"
-                        : bid?.status === "rejected"
-                        ? "badge-danger bg-red-100 text-red-800"
-                        : "badge-warning bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {bid?.status || "unknown"}
-                  </span>
-                </td>
-                <td className="py-3">
-                  <div className="d-flex gap-1">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-warning"
-                      onClick={() => onEdit(bid)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger"
-                      onClick={() => onDelete(bid?.id, bid?.title)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          )}
+          ))}
         </tbody>
       </table>
     </div>
   );
-};
+}
 
 export default VirtualizedSmartBidTable;

@@ -604,10 +604,11 @@ function BidsPage({ setActivePage, theme, toggleTheme }) {
                 </div> */}
 
                 <VirtualizedSmartBidTable
-                  data={paginatedData}
+                  bids={paginatedData}
+                  searchTerm={searchTerm}
+                  statusFilter={statusFilter}
                   onEdit={handleEdit}
                   onDelete={handleDeleteClick}
-                  loading={false}
                   emptyMessage={
                     searchTerm || statusFilter !== "all"
                       ? "No matching bids found."

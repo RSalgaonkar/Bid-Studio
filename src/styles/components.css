@@ -310,3 +310,58 @@ select.form-control:focus {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+.virtualized-bid-table {
+  width: 100%;
+  background: #fff;
+  overflow: hidden;
+}
+
+.virtualized-bid-header,
+.virtualized-bid-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1.2fr 1fr 1fr 1fr 1.4fr;
+  align-items: center;
+}
+
+.virtualized-bid-header {
+  min-height: 48px;
+  padding: 0 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  font-weight: 700;
+}
+
+.virtualized-bid-row {
+  padding: 0 12px;
+  background: #fff;
+}
+
+.virtualized-bid-row:hover {
+  background: #fafbfc;
+}
+
+.virtualized-bid-head-cell,
+.virtualized-bid-cell {
+  padding: 12px 10px;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+@media (max-width: 991px) {
+  .virtualized-bid-header,
+  .virtualized-bid-row {
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 1.3fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .virtualized-bid-table {
+    overflow-x: auto;
+  }
+
+  .virtualized-bid-header,
+  .virtualized-bid-row {
+    min-width: 900px;
+  }
+}
